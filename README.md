@@ -1,360 +1,130 @@
 # Environmental Clearance Pre-Screening Service
 
-An agentic MLOps mini-project for environmental clearance pre-screening.
-
-The system analyzes a project request, retrieves relevant regulatory provisions, applies applicable conditions, verifies the generated determination against retrieved evidence, and either returns a screening result or escalates the case when it cannot safely determine an answer.
-
-> **Disclaimer:** This system provides a screening opinion only. It is not an authoritative environmental clearance determination.
-
----
-
-## Current Development Status
-
-This repository currently contains the **Person 1 – Agent Core Workflow** implementation.
-
-The current version uses a **stub regulatory corpus for development and testing**. The stub content is not authoritative legal or regulatory text and will later be replaced by the confirmed retrieval/corpus component during team integration.
+**Course:** UE24AM342AA5 — ML System Design & AgentOps  
+**Component:** Jackfruit (Level 3)  
+**Mini Project 13:** Environmental Clearance Pre-Screening Service  
+**Corpus:** EIA Notification, 2006 (Consolidated text up to March 2025, 77 Gazette Amendments, 44 Office Memoranda)  
 
 ---
 
-## Agent Workflow
+## 1. Problem & Context
 
-```text
-Project Request
-      |
-      v
-Input Guardrail
-      |
-      v
-Extractor
-      |
-      v
-Analyst
-      |
-      +----> Search Schedule
-      |
-      +----> Search Modifying Provisions
-      |      (General Condition / Amendment)
-      |
-      v
-Draft Determination
-      |
-      v
-Verifier
-      |
-      +----> Citation validation
-      +----> Required evidence validation
-      +----> Category-route consistency
-      |
-      v
-Output Guardrail
-      |
-      +----> Safe ----> Final Answer
-      |
-      +----> Unsafe --> Escalation
+Before an industrial or infrastructure project can be built in India, it may require prior environmental clearance under the **Environmental Impact Assessment (EIA) Notification, 2006**.
+Screening answers two critical questions:
+1. Is the project in the Schedule at all?
+2. Is it **Category A** (appraised centrally by MoEFCC on EAC recommendation) or **Category B** (appraised at state level by SEIAA)?
+
+### The Difficult Case (§4.1)
+An industrial project (e.g. 0.8 MTPA cement plant) placed in Category B by the Schedule, but located **2 kilometres from the boundary of a National Park**.
+- Straightforward semantic retrieval returns Schedule Item 3(b) (which says Category B) and fails.
+- The **General Condition (GC)**, printed after the Schedule, treats Category B projects within **5 km** (S.O. 1599(E) 2014) of a protected area as **Category A**.
+- **Our solution:** A multi-agent reasoning layer built with **LangGraph** where the Screener calls `find_modifiers` to deterministically retrieve the General Condition, and the Verifier guarantees that both the Schedule entry and the General Condition are cited and resolved to text.
+
+---
+
+## 2. Architecture & Deployment Boundaries
+
+```mermaid
+flowchart TD
+    Client["Web Client UI (A8)<br/>(Browser: port 8000)"] -->|POST /v1/screenings| API["api · FastAPI Service<br/>• Published Data Contract (D1)<br/>• Schema & Cross-field Validation<br/>• Quarantine Reject Boundary (F2)<br/>• Async Run Dispatcher (A4)<br/>• Client Rate Limiter (D7)"]
+
+    API -->|Quarantined 422| QStore[("Quarantine Store<br/>quarantined_records.json<br/>agent_started=False")]
+    API -->|Enqueues run_id| Queue[("Redis Queue & Cache (D7)<br/>port 6379")]
+
+    subgraph AgentWorker ["Scalable Agent Worker (A7: --scale agent-worker=3)"]
+        Worker["Background Task Worker"]
+        Extractor["Extractor Node<br/>• Entity Extraction (F3)<br/>• L4 Injection Guardrail"]
+        Screener["Provision Screener (A1)<br/>• Schedule Threshold Matching<br/>• find_modifiers Tool (GC)<br/>• F7 Escalations"]
+        Verifier["Verifier Node (A3)<br/>• Grounding Check<br/>• Required Citations (P1+P2)<br/>• Route Agreement"]
+    end
+
+    Queue --> Worker
+    Worker --> Extractor --> Screener --> Verifier
+
+    Screener & Verifier --> KnowledgeStore[("Confirmed Knowledge Store (L1/D2)<br/>• data/corpus_chunks.json<br/>• data/schedule_thresholds.yaml")]
+    Screener --> ResilientLLM{{"Resilient LLM Gateway (A5)<br/>• Exponential Backoff<br/>• Circuit Breaker<br/>• Fallback Stub"}}
+
+    API -->|GET /metrics| Prom["Prometheus (D5)<br/>port 9090"]
+    API -.OTLP Traces.-> Jaeger["Jaeger (D5)<br/>port 16686 / 4318"]
 ```
 
 ---
 
-## Person 1 – Agent Core
+## 3. Quickstart & Clean Clone Setup
 
-The current implementation includes:
+### Option A: Local Run (Fastest)
+1. **Clone repository:**
+   ```bash
+   git clone https://github.com/pallaviB463/Environmental-Clearance-MLOps.git
+   cd Environmental-Clearance-MLOps
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Start the FastAPI Service:**
+   ```bash
+   python -m uvicorn api.app:app --host 127.0.0.1 --port 8000
+   ```
+4. **Open Web Client in Browser:**  
+   Navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**  
+   Click the preset button **"⭐ Section 4.1: Cement 2km NP (Cat A)"** to test immediately!
 
-- Typed agent state and request contracts
-- LangGraph-based workflow orchestration
-- Entity extraction
-- Provision analysis
-- Schedule retrieval
-- Modifier retrieval
-- Self-verification
-- Citation validation
-- Category and route consistency checks
-- Controlled escalation
-- Maximum step and tool-call limits
-- Provider-independent LLM interface
-- Stub LLM client
-- Retry with exponential backoff
-- Timeout handling
-- Circuit breaker
-- Safe LLM failure handling
-- Prompt-injection detection
-- Input guardrail
-- Output guardrail
-- Screening disclaimer
-- Local end-to-end execution
-
----
-
-## Project Structure
-
-```text
-Environmental-Clearance-MLOps/
-|
-├── agent/
-│   ├── agents/
-│   │   ├── extractor.py
-│   │   ├── analyst.py
-│   │   └── verifier.py
-│   │
-│   ├── guardrails/
-│   │   ├── injection.py
-│   │   ├── output_filter.py
-│   │   └── toxicity.py
-│   │
-│   ├── llm/
-│   │   ├── client.py
-│   │   ├── stub_client.py
-│   │   ├── resilient_client.py
-│   │   └── safe_call.py
-│   │
-│   ├── resilience/
-│   │   ├── circuit_breaker.py
-│   │   ├── retry.py
-│   │   └── timeouts.py
-│   │
-│   ├── tools/
-│   │   ├── search_corpus.py
-│   │   ├── get_clause.py
-│   │   └── request_fields.py
-│   │
-│   ├── prompts/
-│   │   └── v1/
-│   │
-│   ├── stub_data/
-│   │   └── corpus.json
-│   │
-│   ├── config.py
-│   ├── graph.py
-│   └── state.py
-│
-├── tests/
-├── run_local.py
-├── requirements.txt
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
----
-
-## Example Scenario
-
-The current development scenario represents an industrial project located near a protected area.
-
-The stub Schedule evidence initially classifies the example project as:
-
-```text
-Category B
-```
-
-The agent does not stop after the first retrieval. It searches for modifying provisions and retrieves the stub General Condition.
-
-The resulting development-stage determination is:
-
-```text
-Category B
-    |
-    | General Condition applies
-    v
-Category A
-    |
-    v
-Central Route
-```
-
-Both the Schedule and General Condition evidence are retained and verified before the answer is accepted.
-
-> The regulatory text used in this example is test/stub data and must not be interpreted as an actual legal determination.
-
----
-
-## Installation
-
-### 1. Clone the repository
-
+### Option B: Docker Compose (Requirement D3)
 ```bash
-git clone <repository-url>
-cd Environmental-Clearance-MLOps
+docker compose up -d
 ```
+All 5 containers (`api`, `agent-worker`, `redis`, `prometheus`, `jaeger`) start up with health checks declared.
 
-### 2. Create a virtual environment
+---
 
+## 4. Verification & Testing
+
+### 1. Test All 10 Demonstration Items (Section 9)
+Run the automated end-to-end demonstration script:
 ```bash
-python -m venv .venv
+python demo.py
 ```
+This directly tests:
+1. System health check
+2. Valid request producing routed recommendation with citations
+3. One run traced end-to-end with per-step latency and cost
+4. Malformed request quarantined at boundary (`agent_started: false`)
+5. Case corpus cannot answer (CRZ Beach Resort -> `OUT_OF_CORPUS`)
+6. Self-verification catching ungrounded answers
+7. Prompt injection attack detected by guardrail
+8. Circuit breaker opening after provider failures
+9. Locust results against declared SLO
+10. Section 4.1 Cement Plant difficult case handled correctly
 
-### 3. Activate the environment
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### 4. Install dependencies
-
+### 2. Run the 20-Scenario Evaluation Benchmark (L2 / L3)
 ```bash
-pip install -r requirements.txt
+python eval/run_eval.py
 ```
 
----
+**Evaluation Results:**
+- **Faithfulness:** `100.0%`
+- **Groundedness:** `100.0%`
+- **Context Relevance:** `97.8%`
+- **Hallucination Rate:** `0.0%`
+- **Artifact:** Persisted to `eval/evaluation_report.json`
 
-## Environment Configuration
-
-Copy:
-
-```text
-.env.example
-```
-
-to:
-
-```text
-.env
-```
-
-The configuration supports settings such as:
-
-```text
-MAX_STEPS
-MAX_TOOL_CALLS
-MAX_VERIFICATION_RETRIES
-LLM_TIMEOUT_SECONDS
-TOOL_TIMEOUT_SECONDS
-MAX_RETRIES
-LLM_PROVIDER
-LLM_MODEL
-LLM_BASE_URL
-LLM_API_KEY
-PROMPT_VERSION
-```
-
-Do not commit the real `.env` file or API keys.
-
----
-
-## Run the Agent Locally
-
-Execute:
-
+### 3. Load Testing with Locust (Requirement D6)
 ```bash
-python run_local.py
+locust -f loadtest/locustfile.py --headless -u 10 -r 2 --run-time 30s --host http://localhost:8000
 ```
-
-A successful development run should produce:
-
-```text
-FINAL STATUS
-------------------------------------------------------------
-answered
-```
-
-The current test scenario should produce:
-
-```text
-Category : A
-Route    : category_a_central
-```
-
-with evidence from both:
-
-```text
-Schedule
-General Condition
-```
-
-The verifier checks that the citations were actually retrieved during the current run and that the category and route are consistent.
+- **Declared SLO Target:** p95 latency $\le 60.0\text{s}$ at 10 concurrency with stub LLM.
+- **Measured Result:** $\approx 0.005\text{s}$ (cached) / $0.05\text{s}$ (executed), well within target.
 
 ---
 
-## Guardrails
+## 5. Key Artifacts & Documentation
 
-### Input Guardrail
-
-Project descriptions are checked for suspicious prompt-injection instructions before entering the reasoning workflow.
-
-Unsafe input is escalated instead of being processed normally.
-
-### Output Guardrail
-
-Before a verified determination is returned, the output is checked for:
-
-- Invalid routing values
-- Unsupported authoritative claims
-- Statements implying official approval
-- Statements implying that no further clearance is required
-
-Safe responses include the disclaimer:
-
-> This is a screening opinion, not an authoritative environmental clearance determination.
-
----
-
-## Reliability and Resilience
-
-The LLM layer includes:
-
-- Provider-independent client interface
-- Configurable timeouts
-- Retry with exponential backoff
-- Circuit breaker
-- Controlled error handling
-- Stub provider for local testing
-
-Provider failures are handled without allowing uncontrolled exceptions to become final agent answers.
-
----
-
-## Testing
-
-Manual development tests are available in the `tests/` directory.
-
-Examples:
-
-```bash
-python -m tests.test_circuit_breaker_manual
-python -m tests.test_timeout_manual
-python -m tests.test_resilient_client_manual
-python -m tests.test_safe_llm_manual
-python -m tests.test_injection_manual
-python -m tests.test_output_filter_manual
-python -m tests.test_graph_injection_manual
-```
-
----
-
-## Current Limitations
-
-The current implementation is a development-stage Agent Core.
-
-- The regulatory corpus is currently stub data.
-- Stub regulatory text must not be treated as authoritative.
-- The final corpus/retrieval component must be integrated with the agent.
-- Team-level API, deployment, evaluation, and other integration components are outside the current Person 1 implementation.
-- Final regulatory correctness depends on the confirmed corpus and rules supplied during integration.
-
----
-
-## Next Integration Phase
-
-The Agent Core is designed so that the current stub retrieval layer can later be replaced with the team's confirmed retrieval component while keeping the agent workflow stable.
-
-```text
-Person 1 Agent Core
-        |
-        v
-Confirmed Retrieval / Corpus
-        |
-        v
-Team Integration
-        |
-        v
-Evaluation and Deployment
-```
-
----
-
-## Important Notice
-
-This project is developed for academic and experimental purposes.
-
-It must not be used as a substitute for official environmental clearance procedures, regulatory authorities, legal advice, or authoritative government documentation.
+- **Data Contract & Validation:** [`api/contract.py`](api/contract.py)
+- **Quarantine Store:** [`api/quarantine.py`](api/quarantine.py)
+- **Schedule Thresholds (YAML):** [`data/schedule_thresholds.yaml`](data/schedule_thresholds.yaml)
+- **Corpus Manifest (123 Docs):** [`data/corpus_manifest.csv`](data/corpus_manifest.csv)
+- **Evaluation Plan & Reference Cases:** [`docs/EVAL1_corpus_and_plan.md`](docs/EVAL1_corpus_and_plan.md)
+- **Production Runbook & Incident Log:** [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
+- **Web UI Client:** [`frontend/index.html`](frontend/index.html)
+- **Environment Template:** [`.env.example`](.env.example)

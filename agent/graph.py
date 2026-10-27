@@ -190,7 +190,7 @@ def after_verifier(state: AgentState):
 
         state.verification_retries += 1
 
-        if state.verification_retries > settings.settings.max_verification_retries:
+        if state.verification_retries > settings.max_verification_retries:
             state.escalation = Escalation(
                 reason_code="VERIFICATION_FAILED",
                 detail=(

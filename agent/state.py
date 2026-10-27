@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------
-# INPUT MODELS
+# INPUT MODELS (Published Data Contract D1 / F1)
 # ---------------------------------------------------------
 
 class Capacity(BaseModel):
@@ -18,7 +18,9 @@ class Location(BaseModel):
 
 class ProtectedArea(BaseModel):
     type: str
+    name: Optional[str] = None
     distance_km: Optional[float] = None
+    basis: Optional[str] = "surveyed"  # "surveyed" or "estimated"
 
 
 class ProjectRequest(BaseModel):
@@ -26,13 +28,21 @@ class ProjectRequest(BaseModel):
     correlation_id: str
 
     description: str
-
+    project_name: Optional[str] = None
+    activity: Optional[str] = "new"
+    sector_description: Optional[str] = None
     sector_hint: Optional[str] = None
+
     capacity: Optional[Capacity] = None
     area_ha: Optional[float] = None
+    project_area_ha: Optional[float] = None
 
     location: Optional[Location] = None
     nearest_protected_area: Optional[ProtectedArea] = None
+
+    proximity: Optional[List[Dict[str, Any]]] = None
+    in_critically_polluted_area: Optional[bool] = False
+    eco_sensitive_zone: Optional[str] = None
 
 
 # ---------------------------------------------------------
@@ -47,6 +57,7 @@ class Chunk(BaseModel):
     clause: str
     text: str
     score: float = 0.0
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------
@@ -63,7 +74,13 @@ class ExtractedEntities(BaseModel):
     district: Optional[str] = None
 
     protected_area_type: Optional[str] = None
+    protected_area_name: Optional[str] = None
     protected_area_distance_km: Optional[float] = None
+    proximity_basis: str = "surveyed"
+
+    interstate_distance_km: Optional[float] = None
+    in_critically_polluted_area: bool = False
+    eco_sensitive_zone: Optional[str] = None
 
     confidence: float = 0.0
     missing_fields: List[str] = Field(default_factory=list)
@@ -80,7 +97,8 @@ class DraftDetermination(BaseModel):
         Literal[
             "no_clearance",
             "category_b_state",
-            "category_a_central"
+            "category_a_central",
+            "escalate_to_human"
         ]
     ] = None
 
@@ -122,13 +140,13 @@ class Escalation(BaseModel):
 
 class AgentState(BaseModel):
 
-    # Original validated request from Person 3
+    # Original validated request
     request: ProjectRequest
 
     # Extractor output
     extracted_entities: Optional[ExtractedEntities] = None
 
-    # Chunks retrieved from Person 2's retrieval layer
+    # Chunks retrieved during run
     retrieved_chunks: Dict[str, Chunk] = Field(default_factory=dict)
 
     # Analyst output

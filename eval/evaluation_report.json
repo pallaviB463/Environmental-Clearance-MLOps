@@ -1,0 +1,510 @@
+{
+  "metrics_v1": {
+    "total_scenarios": 21,
+    "correct_category_rate": 1.0,
+    "correct_route_rate": 1.0,
+    "groundedness": 1.0,
+    "context_relevance": 0.9783,
+    "faithfulness": 1.0,
+    "hallucination_rate": 0.0,
+    "evaluation_duration_seconds": 0.337,
+    "results": [
+      {
+        "id": "RC-1",
+        "name": "Section 4.1 Reference Case (Cement near PA)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-2",
+        "name": "Cement Plant at 7 km (2014 GC amendment currency)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-3a",
+        "name": "Threshold Boundary Inside (4.9 km)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-3b",
+        "name": "Threshold Boundary Outside (5.1 km)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-4",
+        "name": "Large Cement Plant (Schedule alone)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-5",
+        "name": "Thermal Power Plant 10 km Proviso",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-6",
+        "name": "Interstate Boundary GC Trigger",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-7",
+        "name": "Quashed Amendment Conflict (Building 8a)",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-8",
+        "name": "Uncertain Proximity Margin",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-9",
+        "name": "Outside Corpus (Coastal Regulation Zone)",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-10",
+        "name": "Prompt Injection Red Team Attack",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-11",
+        "name": "Critically Polluted Area GC Trigger",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-12",
+        "name": "Large Thermal Power (>= 500 MW)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-13",
+        "name": "Small Thermal Power (< 500 MW, 15 km away)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:1(d)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-14",
+        "name": "Missing Protected Area Distance",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-15",
+        "name": "Standalone Grinding Unit Remote",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-16",
+        "name": "Unknown Sector Description",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-17",
+        "name": "Border Proximity Thermal Power",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-18",
+        "name": "Cement Plant 4.0 km Sanctuary",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-19",
+        "name": "Cement Plant 12.0 km Remote",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-20",
+        "name": "Thermal Power 9.5 km Proviso Inside",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      }
+    ]
+  },
+  "metrics_v2": {
+    "total_scenarios": 21,
+    "correct_category_rate": 1.0,
+    "correct_route_rate": 1.0,
+    "groundedness": 1.0,
+    "context_relevance": 0.9783,
+    "faithfulness": 1.0,
+    "hallucination_rate": 0.0,
+    "evaluation_duration_seconds": 0.315,
+    "results": [
+      {
+        "id": "RC-1",
+        "name": "Section 4.1 Reference Case (Cement near PA)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-2",
+        "name": "Cement Plant at 7 km (2014 GC amendment currency)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-3a",
+        "name": "Threshold Boundary Inside (4.9 km)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-3b",
+        "name": "Threshold Boundary Outside (5.1 km)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-4",
+        "name": "Large Cement Plant (Schedule alone)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-5",
+        "name": "Thermal Power Plant 10 km Proviso",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-6",
+        "name": "Interstate Boundary GC Trigger",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-7",
+        "name": "Quashed Amendment Conflict (Building 8a)",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-8",
+        "name": "Uncertain Proximity Margin",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-9",
+        "name": "Outside Corpus (Coastal Regulation Zone)",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-10",
+        "name": "Prompt Injection Red Team Attack",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-11",
+        "name": "Critically Polluted Area GC Trigger",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-12",
+        "name": "Large Thermal Power (>= 500 MW)",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-13",
+        "name": "Small Thermal Power (< 500 MW, 15 km away)",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:1(d)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-14",
+        "name": "Missing Protected Area Distance",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-15",
+        "name": "Standalone Grinding Unit Remote",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-16",
+        "name": "Unknown Sector Description",
+        "status": "escalated",
+        "category": null,
+        "route": null,
+        "citations": [],
+        "passed": true
+      },
+      {
+        "id": "RC-17",
+        "name": "Border Proximity Thermal Power",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-18",
+        "name": "Cement Plant 4.0 km Sanctuary",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:3(b)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-19",
+        "name": "Cement Plant 12.0 km Remote",
+        "status": "answered",
+        "category": "B",
+        "route": "category_b_state",
+        "citations": [
+          "schedule:3(b)",
+          "para:4(iii)"
+        ],
+        "passed": true
+      },
+      {
+        "id": "RC-20",
+        "name": "Thermal Power 9.5 km Proviso Inside",
+        "status": "answered",
+        "category": "A",
+        "route": "category_a_central",
+        "citations": [
+          "schedule:1(d)",
+          "gc:s_o_1599_e_2014",
+          "para:4(ii)"
+        ],
+        "passed": true
+      }
+    ]
+  }
+}

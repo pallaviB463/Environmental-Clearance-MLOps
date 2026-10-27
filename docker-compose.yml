@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+  # 1. API Service (FastAPI, Ingestion Boundary, Web Client UI)
+  api:
+    build: .
+    container_name: eia-api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - REDIS_URL=redis://redis:6379/0
+      - LLM_PROVIDER=stub
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 2. Agent Worker Service (Scalable multi-agent worker: --scale agent-worker=3)
+  agent-worker:
+    build: .
+    restart: always
+    command: ["python", "-m", "api.worker"]
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - LLM_PROVIDER=stub
+    depends_on:
+      - redis
+      - api
+
+  # 3. Redis Service (Queue, Run Caching, Per-Client Rate Limiting)
+  redis:
+    image: redis:7-alpine
+    container_name: eia-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 4. Prometheus Service (Metrics Collection & SLO Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: eia-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
+  # 5. Jaeger Service (Distributed OpenTelemetry Tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: eia-jaeger
+    restart: always
+    ports:
+      - "16686:16686" # Web UI
+      - "4318:4318"   # OTLP HTTP receiver

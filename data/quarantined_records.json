@@ -1,0 +1,151 @@
+[
+  {
+    "quarantine_id": "quar_5b2fa5fe",
+    "timestamp": 1793120349.4990354,
+    "client_ip": "127.0.0.1",
+    "payload": {
+      "project_name": "Illegal Capacity Test",
+      "description": "Invalid cement plant with negative capacity.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_3d9150b3",
+    "timestamp": 1793120879.850652,
+    "client_ip": "127.0.0.1",
+    "payload": {
+      "project_name": "Invalid Capacity Plant",
+      "description": "Negative capacity test.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_1936cffd",
+    "timestamp": 1793120923.9413097,
+    "client_ip": "127.0.0.1",
+    "payload": {
+      "project_name": "Invalid Capacity Plant",
+      "description": "Negative capacity test.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_11bf5dc5",
+    "timestamp": 1793121034.627324,
+    "client_ip": "127.0.0.1",
+    "payload": {
+      "project_name": "Illegal Capacity Test",
+      "description": "Invalid cement plant with negative capacity.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_3d1b64bd",
+    "timestamp": 1793122260.9553268,
+    "client_ip": "127.0.0.1",
+    "payload": {
+      "project_name": "Malformed Input Test",
+      "description": "Testing quarantine boundary validation with negative capacity and invalid unit.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5,
+        "unit": "MW"
+      },
+      "project_area_ha": 20,
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      },
+      "proximity": [
+        {
+          "feature": "protected_area",
+          "subtype": "national_park",
+          "distance_km": 3,
+          "basis": "surveyed"
+        }
+      ]
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  }
+]
