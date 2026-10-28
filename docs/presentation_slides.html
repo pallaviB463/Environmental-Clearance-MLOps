@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EIA Pre-Screening Service — Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b132b;
+      --card-bg: rgba(20, 32, 60, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --emerald: #10b981;
+      --cyan: #06b6d4;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.5rem;
+    }
+    .slide {
+      width: 100%;
+      max-width: 1150px;
+      aspect-ratio: 16 / 9;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+      page-break-after: always;
+    }
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--emerald), var(--cyan), var(--amber));
+    }
+    .slide-num {
+      position: absolute;
+      bottom: 1.5rem;
+      right: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--emerald);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.5rem;
+    }
+    .title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      flex: 1;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      flex: 1;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+    }
+    .card {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .card-body {
+      font-size: 0.95rem;
+      color: #e5e7eb;
+      line-height: 1.5;
+    }
+    .card-body li {
+      margin-left: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-lbl {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 0.25rem;
+    }
+    .title-hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      border-left: 5px solid var(--emerald);
+      padding-left: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Slide 1: Title -->
+  <div class="slide">
+    <div class="title-hero">
+      <div class="tag" style="font-size: 1rem; color: var(--cyan);">UE24AM342AA5 — ML SYSTEM DESIGN & AGENTOPS · MINI PROJECT 13</div>
+      <h1 style="font-size: 3.2rem; font-weight: 800; margin: 0.75rem 0 1.25rem 0; line-height: 1.15;">
+        Environmental Clearance<br><span style="color: var(--emerald);">Pre-Screening Service</span>
+      </h1>
+      <p style="font-size: 1.25rem; color: var(--muted); margin-bottom: 2rem; max-width: 800px;">
+        A Production Multi-Agent Legal Reasoning & Verification Service under EIA Notification, 2006
+      </p>
+      <div style="font-size: 1rem; font-weight: 600; color: var(--amber);">
+        Component: Jackfruit (Level 3) &nbsp;|&nbsp; Dept of CSE (AI & ML), PES University
+      </div>
+    </div>
+    <div class="slide-num">01 / 12</div>
+  </div>
+
+  <!-- Slide 2: Context -->
+  <div class="slide">
+    <div class="tag">Problem Understanding</div>
+    <div class="title">Regulatory Context: EIA Screening in India</div>
+    <div class="subtitle">Why pre-screening precision is critical prior to environmental impact appraisal</div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">The Statutory Mandate</div>
+        <ul class="card-body">
+          <li>Before an industrial project begins in India, prior environmental clearance is required under EIA 2006.</li>
+          <li>Screening determines: Is the project in the Schedule? Is it Category A or Category B?</li>
+          <li>Decided before any assessment begins.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">High Cost of Error</div>
+        <ul class="card-body">
+          <li>Category A is appraised centrally by MoEFCC on EAC recommendation.</li>
+          <li>Category B is appraised by State SEIAA.</li>
+          <li>A clearance granted at the wrong level can be set aside by the National Green Tribunal, halting construction.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">System Philosophy</div>
+        <ul class="card-body">
+          <li>This is a production service, not a notebook.</li>
+          <li>Never determines clearance authoritatively; produces a screening opinion.</li>
+          <li>All decisions grounded in retrieved provisions. Accredited consultant makes the final decision.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">02 / 12</div>
+  </div>
+
+  <!-- Slide 3: Difficult Case -->
+  <div class="slide">
+    <div class="tag">Core Technical Challenge</div>
+    <div class="title">The Difficult Case (§4.1) & Retrieval Traps</div>
+    <div class="subtitle">Why naive semantic RAG fails and multi-agent reasoning is essential</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">The Demonstration Scenario</div>
+        <ul class="card-body">
+          <li><strong>Input:</strong> Industrial cement plant of 0.8 MTPA capacity, located 2.0 km from a National Park boundary.</li>
+          <li><strong>The Naive RAG Trap:</strong> A single retrieval pass returns Schedule Item 3(b) (which places capacity &lt; 1.0 MTPA in Category B).</li>
+          <li><strong>The Failure:</strong> Reporting Category B alone fails the demonstration because the project modifies under sensitive proximity!</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">The Multi-Agent Solution</div>
+        <ul class="card-body">
+          <li><strong>General Condition (GC):</strong> Printed in a note after the Schedule, shifts Cat B projects within 5 km of Protected Areas to Category A.</li>
+          <li><strong>Explicit Modifier Retrieval:</strong> Screener identifies Schedule 3(b) and invokes <code>find_modifiers</code> to retrieve the General Condition.</li>
+          <li><strong>Dual Grounded Citation:</strong> Final recommendation cites BOTH Schedule Item 3(b) and General Condition S.O. 1599(E).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">03 / 12</div>
+  </div>
+
+  <!-- Slide 4: Multi-Agent Architecture -->
+  <div class="slide">
+    <div class="tag">System Architecture</div>
+    <div class="title">Multi-Agent Reasoning Topology (A1–A3)</div>
+    <div class="subtitle">Built with LangGraph with distinct responsibilities and defined hand-offs</div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">1. Extractor Node</div>
+        <ul class="card-body">
+          <li>Parses structured and narrative descriptions.</li>
+          <li><strong>L4 Guardrail:</strong> Prompt injection defense on all free-text fields.</li>
+          <li>Extracts capacity, location, and sensitive feature proximity entities.</li>
+          <li>Flags missing or uncertain fields.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">2. Screener Node</div>
+        <ul class="card-body">
+          <li>Matches sector against statutory Schedule thresholds.</li>
+          <li><strong>Dynamic Tools:</strong> Calls <code>search_corpus</code>, <code>get_clause</code>, and <code>find_modifiers</code>.</li>
+          <li>Applies General Condition S.O. 1599(E) 5 km / 10 km rules.</li>
+          <li>Evaluates F7 escalation boundaries.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">3. Verifier Node</div>
+        <ul class="card-body">
+          <li><strong>Requirement A3:</strong> Every citation must resolve to text retrieved during the run.</li>
+          <li>Category A via GC must cite BOTH Schedule and General Condition.</li>
+          <li>Checks Category/Route consistency.</li>
+          <li>Bounded execution: max 10 steps, 8 tool calls, 2 retries.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">04 / 12</div>
+  </div>
+
+  <!-- Slide 5: Corpus Engineering -->
+  <div class="slide">
+    <div class="tag">Corpus Engineering</div>
+    <div class="title">Confirmed Corpus & Hand-Verified Thresholds</div>
+    <div class="subtitle">Addressing OCR table corruption with structured statutory metadata (L1 / D2)</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">123 MoEFCC Documents & Manifest</div>
+        <ul class="card-body">
+          <li>Consolidated EIA Notification 2006 (TNPCB text amended up to March 2025).</li>
+          <li>77 Gazette Amendments: S.O. 1939(E) to S.O. 3372(E).</li>
+          <li>44 Office Memoranda: Proximity, critically polluted areas, and wildlife clearances.</li>
+          <li><code>data/corpus_manifest.csv</code>: Complete SHA-256 provenance tracking.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">Structured Threshold Engineering</div>
+        <ul class="card-body">
+          <li><strong>The OCR Glyph Problem:</strong> Standard PDF table extractors lose '≥' and '≤' symbols.</li>
+          <li><code>data/schedule_thresholds.yaml</code>: Hand-verified thresholds verified against gazette text.</li>
+          <li><strong>Provision-Level Chunking:</strong> Distinct chunks for Schedule items, General Condition note, and Paragraph 4 route clauses.</li>
+          <li>Idempotent indexing pipeline recording data freshness.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">05 / 12</div>
+  </div>
+
+  <!-- Slide 6: Ingestion Boundary & Quarantine -->
+  <div class="slide">
+    <div class="tag">Platform Engineering</div>
+    <div class="title">Ingestion Boundary & Quarantine Isolation (D1 / F2)</div>
+    <div class="subtitle">Strict validation preventing malformed requests from launching agent runs</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">Published Data Contract</div>
+        <ul class="card-body">
+          <li><code>POST /v1/screenings</code> enforced with strict Pydantic contract.</li>
+          <li>Schema, range, categorical, and cross-field validation at boundary.</li>
+          <li>Rejects negative capacity (e.g. -5 MTPA), negative distances, and unit mismatches (MW for cement).</li>
+          <li>Returns HTTP 422 Unprocessable Entity with field errors.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">Quarantine Architecture (Demo Item 4)</div>
+        <ul class="card-body">
+          <li>Malformed payloads are quarantined to <code>quarantined_records.json</code>.</li>
+          <li><strong>Guaranteed:</strong> Zero agent runs started on invalid input.</li>
+          <li>Auditable via <code>GET /v1/quarantine</code>.</li>
+          <li>Async polling pattern: Valid requests return HTTP 202 Accepted + <code>/v1/screenings/{id}</code>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">06 / 12</div>
+  </div>
+
+  <!-- Slide 7: Knowing When Not to Answer -->
+  <div class="slide">
+    <div class="tag">Reliability & Safety</div>
+    <div class="title">Knowing When NOT to Answer (Requirement F7)</div>
+    <div class="subtitle">Escalating to human review when evidence is uncertain or conflicting</div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">1. Proximity Uncertain (RC-8)</div>
+        <ul class="card-body">
+          <li>Protected area identified but distance omitted or approximate.</li>
+          <li>When estimated proximity falls within ±1 km margin of 5 km threshold (4.0–6.0 km).</li>
+          <li><strong>Outcome:</strong> <code>ESCALATE_TO_HUMAN</code> (PROXIMITY_UNCERTAIN).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">2. Amendment Conflict (RC-7)</div>
+        <ul class="card-body">
+          <li>Building & Construction Item 8(a) projects.</li>
+          <li>S.O. 3999(E) was quashed by National Green Tribunal (Footnote 92 in consolidated text).</li>
+          <li><strong>Outcome:</strong> <code>ESCALATE_TO_HUMAN</code> (AMENDMENT_CONFLICT).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">3. Outside Corpus (RC-9)</div>
+        <ul class="card-body">
+          <li>Projects falling under Coastal Regulation Zone (CRZ Notification 2019/2011).</li>
+          <li>Appraised by NCZMA/SCZMA, outside EIA 2006 Schedule.</li>
+          <li><strong>Outcome:</strong> <code>ESCALATE_TO_HUMAN</code> (OUT_OF_CORPUS).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">07 / 12</div>
+  </div>
+
+  <!-- Slide 8: Evaluation Benchmark -->
+  <div class="slide">
+    <div class="tag">LLMOps & Evaluation</div>
+    <div class="title">20-Scenario Benchmark & Metric Results (L2 / L3)</div>
+    <div class="subtitle">Rigorous batch evaluation measuring Faithfulness, Groundedness, and Relevance</div>
+    <div class="grid-4" style="margin-bottom: 1.5rem;">
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--emerald);">100.0%</div>
+        <div class="stat-lbl">Faithfulness</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--cyan);">100.0%</div>
+        <div class="stat-lbl">Groundedness</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--amber);">97.8%</div>
+        <div class="stat-lbl">Context Relevance</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--emerald);">0.0%</div>
+        <div class="stat-lbl">Hallucination Rate</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Deliberate Change Comparison (L3)</div>
+        <ul class="card-body">
+          <li>Variant A: Single-pass semantic retrieval fails on RC-1, RC-5, RC-6 (General Condition missed).</li>
+          <li>Variant B: Multi-agent retrieval with <code>find_modifiers</code> achieves 100% correct routing.</li>
+          <li>Demonstrates architectural necessity of agentic tool calling over fixed pipelines.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">Prompt Versioning & Feedback (L2 / L6)</div>
+        <ul class="card-body">
+          <li>Prompt v1 vs v2 compared across all 20 scenarios.</li>
+          <li>Response records active prompt version for run audit.</li>
+          <li><code>POST /v1/screenings/{id}/feedback</code> logs consultant satisfaction.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">08 / 12</div>
+  </div>
+
+  <!-- Slide 9: Observability & SLO -->
+  <div class="slide">
+    <div class="tag">Observability & SRE</div>
+    <div class="title">Observability, Telemetry & Declared SLO (D5 / D6)</div>
+    <div class="subtitle">Tracing, Prometheus metrics, and load testing against declared service level objectives</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Declared Service Level Objective (D6)</div>
+        <ul class="card-body">
+          <li><strong>Declared Target:</strong> p95 latency ≤ 60.0s at 10 concurrency with stub LLM.</li>
+          <li><strong>Justification:</strong> Pre-screening precedes months of appraisal; correctness and verification outweigh raw speed.</li>
+          <li><strong>Load Test with Locust:</strong> Simulated 10 concurrent consultants polling status.</li>
+          <li><strong>Measured Result:</strong> Sub-second latency (&lt; 0.05s) well within declared 60s SLO deadline.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">Telemetry & Run Reconstruction (D5 / F8)</div>
+        <ul class="card-body">
+          <li>Correlation ID across all services and steps.</li>
+          <li>OpenTelemetry distributed tracing exported to Jaeger.</li>
+          <li>Prometheus <code>/metrics</code> endpoint exposes latency histograms, agent steps, tool calls, and data freshness gauges.</li>
+          <li>Full run reconstruction by <code>run_id</code>: Every tool call, passage, and verification check.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">09 / 12</div>
+  </div>
+
+  <!-- Slide 10: Docker Deployment -->
+  <div class="slide">
+    <div class="tag">Deployment & Operations</div>
+    <div class="title">Docker Compose Architecture & Scaling (D3 / A7)</div>
+    <div class="subtitle">Five containerized services running from a clean clone with horizontal scaling</div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">1. API & Worker Tier</div>
+        <ul class="card-body">
+          <li><code>eia-api</code>: FastAPI ingestion boundary and web UI client on port 8000.</li>
+          <li><code>agent-worker</code>: Scalable asynchronous task processor.</li>
+          <li>Horizontal Worker Scaling (A7): <code>docker compose up --scale agent-worker=3</code>.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--amber);">2. Queue & Caching Tier</div>
+        <ul class="card-body">
+          <li><code>eia-redis</code>: Redis 7 on port 6379.</li>
+          <li>Decoupled queue: submissions never block HTTP requests.</li>
+          <li>Run Caching (D7): identical payloads served instantly with zero model calls.</li>
+          <li>Client rate limiting (60 req/min).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">3. Observability Tier</div>
+        <ul class="card-body">
+          <li><code>eia-prometheus</code>: Scrapes metrics every 5s on port 9090.</li>
+          <li><code>eia-jaeger</code>: Distributed tracing UI on port 16686.</li>
+          <li>Single command: <code>docker compose up -d</code>.</li>
+          <li>Zero secrets in repo (.env.example).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">10 / 12</div>
+  </div>
+
+  <!-- Slide 11: Demo Checklist -->
+  <div class="slide">
+    <div class="tag">Viva & Demonstration</div>
+    <div class="title">Demonstration Checklist: All 10 Items Verified</div>
+    <div class="subtitle">Automated demonstration script (demo.py) passing all Section 9 criteria</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Items 1 to 5 (Core Operations)</div>
+        <ul class="card-body">
+          <li><strong>1. Clean Clone:</strong> Docker compose up to healthy system (GET /health 200 OK).</li>
+          <li><strong>2. Valid Request:</strong> Routed recommendation with citations.</li>
+          <li><strong>3. End-to-End Trace:</strong> Steps, latency, tool calls, and correlation ID.</li>
+          <li><strong>4. Quarantine Reject:</strong> Malformed input quarantined (agent_started=False).</li>
+          <li><strong>5. Unanswerable Case:</strong> CRZ beach resort escalates to human.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">Items 6 to 10 (Safety & Performance)</div>
+        <ul class="card-body">
+          <li><strong>6. Self-Verification:</strong> Checks citations, GC agreement, and route consistency.</li>
+          <li><strong>7. Injection Defense:</strong> Adversarial injection halted at boundary.</li>
+          <li><strong>8. Circuit Breaker:</strong> Trips to OPEN on provider failures.</li>
+          <li><strong>9. Locust Load Test:</strong> Measured latency satisfies declared SLO.</li>
+          <li><strong>10. Section 4.1 Case:</strong> Cement 2 km NP correctly routed to Cat A Central.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">11 / 12</div>
+  </div>
+
+  <!-- Slide 12: Conclusion -->
+  <div class="slide">
+    <div class="tag">Summary & Conclusion</div>
+    <div class="title">Engineering Judgement & Project Summary</div>
+    <div class="subtitle">A robust, verified, and production-ready pre-screening service</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="color: var(--cyan);">Key Engineering Decisions</div>
+        <ul class="card-body">
+          <li><strong>LangGraph over Fixed Pipeline:</strong> Enabled dynamic tool loops and explicit modifier retrieval.</li>
+          <li><strong>Hand-Verified Thresholds:</strong> Overcame OCR table extraction corruption of operators.</li>
+          <li><strong>Boundary Quarantine:</strong> Prevented malformed runs from consuming model budget.</li>
+          <li><strong>Production Runbook:</strong> Documented recovery for circuit breaker trip and queue starvation.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color: var(--emerald);">Deliverables Completed</div>
+        <ul class="card-body">
+          <li>100% of Functional (F1–F8), Agent (A1–A8), LLMOps (L1–L6), and Platform (D1–D8) Requirements.</li>
+          <li>20-Scenario Benchmark Suite with 100% Faithfulness and Groundedness.</li>
+          <li>Full documentation: README.md, docs/RUNBOOK.md, docs/EVAL1_corpus_and_plan.md.</li>
+          <li>Live GitHub Repository: <code>github.com/pallaviB463/Environmental-Clearance-MLOps</code></li>
+        </ul>
+      </div>
+    </div>
+    <div class="slide-num">12 / 12</div>
+  </div>
+
+</body>
+</html>
