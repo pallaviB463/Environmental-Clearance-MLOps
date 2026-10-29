@@ -1,130 +1,191 @@
 # Environmental Clearance Pre-Screening Service
 
-**Course:** UE24AM342AA5 — ML System Design & AgentOps  
-**Component:** Jackfruit (Level 3)  
-**Mini Project 13:** Environmental Clearance Pre-Screening Service  
-**Corpus:** EIA Notification, 2006 (Consolidated text up to March 2025, 77 Gazette Amendments, 44 Office Memoranda)  
+UE24AM342AA5 ML System Design and AgentOps · Mini Project 13 · Jackfruit (Level 3)
+
+Given a project description, the service says whether the project needs prior environmental
+clearance under India's **EIA Notification 2006**, and if so whether it is **Category A**
+(appraised by the Central Government) or **Category B** (appraised by the State), citing the
+provisions it relied on. When the evidence does not settle the question, it **escalates to a
+human** instead of answering. It produces a screening opinion, never a clearance decision.
+
+The hard part (PS §4.1): a Schedule row can say Category B while the **General Condition**,
+printed after the Schedule, moves the same project to Category A because it sits within 5 km of
+a national park. A search on the project type never returns the General Condition. Here, a
+Screener agent reads the row, follows the row's own "General Condition shall apply" reference
+with a tool, and a separate Verifier agent refuses any draft that ignores it.
 
 ---
 
-## 1. Problem & Context
+## 1. Run it (clean clone, Docker)
 
-Before an industrial or infrastructure project can be built in India, it may require prior environmental clearance under the **Environmental Impact Assessment (EIA) Notification, 2006**.
-Screening answers two critical questions:
-1. Is the project in the Schedule at all?
-2. Is it **Category A** (appraised centrally by MoEFCC on EAC recommendation) or **Category B** (appraised at state level by SEIAA)?
+Requirements: Docker Desktop (or Docker Engine with Compose v2.24+), about 6 GB free disk, internet
+for the first build. **No API key is needed**: by default a stub LLM answers.
 
-### The Difficult Case (§4.1)
-An industrial project (e.g. 0.8 MTPA cement plant) placed in Category B by the Schedule, but located **2 kilometres from the boundary of a National Park**.
-- Straightforward semantic retrieval returns Schedule Item 3(b) (which says Category B) and fails.
-- The **General Condition (GC)**, printed after the Schedule, treats Category B projects within **5 km** (S.O. 1599(E) 2014) of a protected area as **Category A**.
-- **Our solution:** A multi-agent reasoning layer built with **LangGraph** where the Screener calls `find_modifiers` to deterministically retrieve the General Condition, and the Verifier guarantees that both the Schedule entry and the General Condition are cited and resolved to text.
+```bash
+git clone https://github.com/pallaviB463/Environmental-Clearance-MLOps.git
+cd Environmental-Clearance-MLOps
+docker compose up --build
+```
+
+The first start takes several minutes: it builds the image, then the `indexer` service parses the
+corpus PDFs, embeds them and builds the FAISS index (about a minute). Everything else waits for it.
+It is ready when `docker compose ps` shows `api` as healthy.
+
+| What | Where |
+|---|---|
+| Web client (submit a project, see the result, citations, escalation path) | http://localhost:8000 |
+| API docs (OpenAPI) | http://localhost:8000/docs |
+| Grafana dashboard | http://localhost:3000 |
+| Jaeger traces | http://localhost:16686 |
+| Prometheus | http://localhost:9090 |
+
+Try the PS §4.1 case from the command line:
+
+```bash
+curl -s -X POST localhost:8000/v1/screenings -H 'content-type: application/json' -d '{
+  "description": "Integrated cement plant of 0.8 MTPA located 2.0 km from the boundary of Gir National Park.",
+  "sector_hint": "cement",
+  "capacity": {"value": 0.8, "unit": "million_tonnes_per_annum"},
+  "location": {"state": "Gujarat", "district": "Gir Somnath"},
+  "proximity": [{"feature": "protected_area", "subtype": "national_park", "distance_km": 2.0, "basis": "surveyed"}]
+}'
+# -> {"run_id": "run_...", "status": "queued", "poll_url": "/v1/screenings/run_..."}
+curl -s localhost:8000/v1/screenings/<run_id>          # poll until status is answered / escalated
+curl -s localhost:8000/v1/screenings/<run_id>/trace    # every tool call, passage, prompt version, cost
+```
+
+Scale the agent workers (A7): `docker compose up -d --scale agent-worker=3`.
+Per-container resource metrics from cAdvisor (optional, Linux hosts):
+`docker compose --profile cadvisor up -d`.
+Stop: `docker compose down` (add `-v` to also delete the index and Redis volumes).
+
+### Use a real LLM (NVIDIA NIM free tier)
+
+```bash
+cp .env.example .env
+# edit .env:
+#   LLM_PROVIDER=nvidia
+#   LLM_BASE_URL=https://integrate.api.nvidia.com/v1
+#   LLM_API_KEY=nvapi-...            (build.nvidia.com -> any model -> "Get API Key")
+#   LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
+#   LLM_FALLBACK_MODEL=openai/gpt-oss-20b
+docker compose up -d --build
+```
+Any OpenAI-compatible endpoint works; the provider is chosen only by configuration.
+
+## 2. Run it without Docker (single process)
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+pip install -r requirements.txt
+python -m ingest build                     # build the index (~1 min the first time; idempotent)
+python run_local.py                        # one screening in-process, prints the trace
+python -m uvicorn api.app:app --port 8000  # API + web client; runs execute in-process (no Redis)
+```
+
+## 3. Demonstration, evaluation, tests, load test
+
+```bash
+python demo.py                                   # walks through the 10 demo items of PS §9 (stack must be up)
+python -m eval.run_eval                          # 28-scenario evaluation (L3), report in eval/reports/
+python -m eval.run_eval --compare v1 v2          # prompt variants on the same set (L2)
+python -m eval.run_eval --change no_find_modifiers   # one deliberate change, before/after (L3)
+pytest -q                                        # unit + integration tests
+python -m loadtest.run_sweep --label workers1    # Locust sweep vs the declared SLO (D6), stack must be up
+```
+
+Run evaluations with the real LLM configured; with the stub, the "model" is the rule engine and
+the numbers only prove that the harness works.
 
 ---
 
-## 2. Architecture & Deployment Boundaries
+## 4. How it works
 
 ```mermaid
-flowchart TD
-    Client["Web Client UI (A8)<br/>(Browser: port 8000)"] -->|POST /v1/screenings| API["api · FastAPI Service<br/>• Published Data Contract (D1)<br/>• Schema & Cross-field Validation<br/>• Quarantine Reject Boundary (F2)<br/>• Async Run Dispatcher (A4)<br/>• Client Rate Limiter (D7)"]
-
-    API -->|Quarantined 422| QStore[("Quarantine Store<br/>quarantined_records.json<br/>agent_started=False")]
-    API -->|Enqueues run_id| Queue[("Redis Queue & Cache (D7)<br/>port 6379")]
-
-    subgraph AgentWorker ["Scalable Agent Worker (A7: --scale agent-worker=3)"]
-        Worker["Background Task Worker"]
-        Extractor["Extractor Node<br/>• Entity Extraction (F3)<br/>• L4 Injection Guardrail"]
-        Screener["Provision Screener (A1)<br/>• Schedule Threshold Matching<br/>• find_modifiers Tool (GC)<br/>• F7 Escalations"]
-        Verifier["Verifier Node (A3)<br/>• Grounding Check<br/>• Required Citations (P1+P2)<br/>• Route Agreement"]
+flowchart LR
+    subgraph client [Caller]
+        UI[Web client / curl / Locust]
     end
-
-    Queue --> Worker
-    Worker --> Extractor --> Screener --> Verifier
-
-    Screener & Verifier --> KnowledgeStore[("Confirmed Knowledge Store (L1/D2)<br/>• data/corpus_chunks.json<br/>• data/schedule_thresholds.yaml")]
-    Screener --> ResilientLLM{{"Resilient LLM Gateway (A5)<br/>• Exponential Backoff<br/>• Circuit Breaker<br/>• Fallback Stub"}}
-
-    API -->|GET /metrics| Prom["Prometheus (D5)<br/>port 9090"]
-    API -.OTLP Traces.-> Jaeger["Jaeger (D5)<br/>port 16686 / 4318"]
+    subgraph api_svc [api container]
+        API[FastAPI<br/>data contract + quarantine<br/>rate limit + run cache<br/>submit / poll / trace / feedback]
+    end
+    subgraph redis_svc [redis container]
+        Q[(queue<br/>run store<br/>events, caches)]
+    end
+    subgraph worker_svc ["agent-worker container (scale x N)"]
+        EX[Extractor<br/>guardrails, entities,<br/>proximity checks] --> SC[Screener agent<br/>LLM tool loop]
+        SC -->|degraded path| RE[Rule engine<br/>provisional opinion]
+        T[[tools: search_corpus<br/>get_clause, find_modifiers<br/>get_request_fields]]
+        SC <--> T
+    end
+    subgraph verifier_svc [verifier-agent container]
+        VF[Verifier agent<br/>deterministic checks<br/>+ LLM review]
+    end
+    subgraph llm [LLM provider]
+        LLM[NVIDIA NIM / llm-stub]
+    end
+    subgraph idx [indexer job + index volume]
+        ING[ingest: PDF -> chunks -> embeddings -> FAISS]
+    end
+    UI -->|POST 202 run_id| API
+    UI -->|GET poll| API
+    API --> Q
+    Q -->|BLMOVE| EX
+    SC -->|draft + passages| VF
+    VF -->|pass / retry with feedback / escalate| SC
+    SC --> LLM
+    VF --> LLM
+    T --- ING
+    subgraph obs [observability]
+        P[Prometheus] --- G[Grafana]
+        J[Jaeger]
+        C[cAdvisor]
+    end
 ```
 
----
+**One run:** the API validates the request against the published contract (a malformed one is
+quarantined with its field errors and never starts a run), stores the run in Redis, queues it and
+returns `202` with a run id. A worker takes it from the queue. The **Extractor** runs the input
+guardrails and pulls out sector, capacity and distances; an injection attempt or an uncertain
+distance is escalated here, before any model call. The **Screener** agent (LLM) chooses tools:
+typically it searches the Schedule, reads the row, calls `find_modifiers`, which follows the
+row's "General Condition shall apply" link to the General Condition, and returns a JSON draft with
+citations and verbatim quotes. The **Verifier** agent (separate service) checks that every citation
+was retrieved in this run, every quote is really in its passage, the route matches the category,
+and that the General Condition was applied when the project is within its distance; then a second
+model reviews the full cited text. A failed check goes back to the Screener with feedback (bounded
+retries) or escalates. Output guardrails run last. If the provider is down, the circuit breaker
+opens and the run is escalated with a rule-based provisional opinion attached, never a confident
+answer.
 
-## 3. Quickstart & Clean Clone Setup
+| Design topic | Where | Notes |
+|---|---|---|
+| Chunking (L1) | [ingest/chunking.py](ingest/chunking.py) | One chunk per Schedule row, the General Condition as its own chunk, footnotes separate; cross-references recorded at ingestion |
+| Index (L1, D2) | [ingest/pipeline.py](ingest/pipeline.py) | LangChain + FAISS + local all-MiniLM-L6-v2; incremental: only changed chunks re-embedded; manifest with freshness |
+| Agents (A1, A2) | [agent/graph.py](agent/graph.py), [agent/agents/](agent/agents/) | LangGraph; Screener + Verifier with own prompts, tools, budgets |
+| Verification (A3) | [agent/agents/verifier.py](agent/agents/verifier.py) | Deterministic checks + LLM review; unverified drafts are never returned |
+| Resilience (A5) | [agent/llm/gateway.py](agent/llm/gateway.py) | Timeout, retry with backoff, circuit breaker per model, fallback model, degraded path |
+| Prompts (L2) | [agent/prompts/](agent/prompts/) | Versioned files; version and hash recorded on every call and result |
+| Guardrails (L4) | [agent/guardrails/](agent/guardrails/) | Injection and toxicity on input, output filter, data delimiters, read-only tools |
+| Contract (D1) | [api/contract.py](api/contract.py) | Served at `GET /v1/contract` |
+| Run trace (D5) | `GET /v1/screenings/{id}/trace` | Every tool call, query, passage id, prompt version, per-step latency, tokens, cost, verification |
+| Eval (L3) | [eval/](eval/) | Metric definitions in [eval/metrics.py](eval/metrics.py) |
+| SLO (D6) | [docs/SLO.md](docs/SLO.md) | p95 of a complete run ≤ 60 s |
+| Runbook (D8) | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Two failure modes + incident log |
 
-### Option A: Local Run (Fastest)
-1. **Clone repository:**
-   ```bash
-   git clone https://github.com/pallaviB463/Environmental-Clearance-MLOps.git
-   cd Environmental-Clearance-MLOps
-   ```
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Start the FastAPI Service:**
-   ```bash
-   python -m uvicorn api.app:app --host 127.0.0.1 --port 8000
-   ```
-4. **Open Web Client in Browser:**  
-   Navigate to: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**  
-   Click the preset button **"⭐ Section 4.1: Cement 2km NP (Cat A)"** to test immediately!
+Configuration is documented in [.env.example](.env.example). No credentials, endpoints or model
+identifiers live in the code.
 
-### Option B: Docker Compose (Requirement D3)
-```bash
-docker compose up -d
-```
-All 5 containers (`api`, `agent-worker`, `redis`, `prometheus`, `jaeger`) start up with health checks declared.
+## 5. API summary
 
----
-
-## 4. Verification & Testing
-
-### 1. Test All 10 Demonstration Items (Section 9)
-Run the automated end-to-end demonstration script:
-```bash
-python demo.py
-```
-This directly tests:
-1. System health check
-2. Valid request producing routed recommendation with citations
-3. One run traced end-to-end with per-step latency and cost
-4. Malformed request quarantined at boundary (`agent_started: false`)
-5. Case corpus cannot answer (CRZ Beach Resort -> `OUT_OF_CORPUS`)
-6. Self-verification catching ungrounded answers
-7. Prompt injection attack detected by guardrail
-8. Circuit breaker opening after provider failures
-9. Locust results against declared SLO
-10. Section 4.1 Cement Plant difficult case handled correctly
-
-### 2. Run the 20-Scenario Evaluation Benchmark (L2 / L3)
-```bash
-python eval/run_eval.py
-```
-
-**Evaluation Results:**
-- **Faithfulness:** `100.0%`
-- **Groundedness:** `100.0%`
-- **Context Relevance:** `97.8%`
-- **Hallucination Rate:** `0.0%`
-- **Artifact:** Persisted to `eval/evaluation_report.json`
-
-### 3. Load Testing with Locust (Requirement D6)
-```bash
-locust -f loadtest/locustfile.py --headless -u 10 -r 2 --run-time 30s --host http://localhost:8000
-```
-- **Declared SLO Target:** p95 latency $\le 60.0\text{s}$ at 10 concurrency with stub LLM.
-- **Measured Result:** $\approx 0.005\text{s}$ (cached) / $0.05\text{s}$ (executed), well within target.
-
----
-
-## 5. Key Artifacts & Documentation
-
-- **Data Contract & Validation:** [`api/contract.py`](api/contract.py)
-- **Quarantine Store:** [`api/quarantine.py`](api/quarantine.py)
-- **Schedule Thresholds (YAML):** [`data/schedule_thresholds.yaml`](data/schedule_thresholds.yaml)
-- **Corpus Manifest (123 Docs):** [`data/corpus_manifest.csv`](data/corpus_manifest.csv)
-- **Evaluation Plan & Reference Cases:** [`docs/EVAL1_corpus_and_plan.md`](docs/EVAL1_corpus_and_plan.md)
-- **Production Runbook & Incident Log:** [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
-- **Web UI Client:** [`frontend/index.html`](frontend/index.html)
-- **Environment Template:** [`.env.example`](.env.example)
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/v1/screenings` | Submit (202 + run id; 422 + quarantine id if invalid; 429 if rate limited) |
+| GET | `/v1/screenings/{id}` | Status and result (category, route, basis, citations, verification, escalation path) |
+| GET | `/v1/screenings/{id}/trace` | Full reconstruction of the run |
+| POST | `/v1/screenings/{id}/feedback` | `{"satisfactory": bool, "reason": str}` |
+| GET | `/v1/feedback/summary`, `/v1/quality` | Aggregated feedback; automatic scores of sampled live runs |
+| GET | `/v1/contract`, `/v1/quarantine` | Published data contract; quarantined submissions |
+| GET | `/health`, `/metrics` | Health; Prometheus metrics |
+| POST/GET | `/admin/chaos`, `/admin/breakers` | Simulate a provider outage; circuit breaker states (demo item 8) |

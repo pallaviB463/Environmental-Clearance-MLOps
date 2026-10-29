@@ -1,155 +1,55 @@
-from agent.graph import graph
-from agent.state import (
-    AgentState,
-    ProjectRequest,
-    Capacity,
-    Location,
-    ProtectedArea
-)
+"""
+Run one screening in-process (no server, no Redis) and print the result and its trace.
+
+    python run_local.py                 # the PS 4.1 case
+    python run_local.py RC-26           # any scenario id from eval/scenarios.json
+"""
+import json
+import sys
+import uuid
+from pathlib import Path
+
+from agent.config import settings
+from agent.retrieval.store import warm_up
+from agent.runner import run_screening
+from api.contract import ScreeningSubmission
+from api.worker import build_request
+from observability.recorder import RunRecorder
 
 
-def main():
+def main() -> int:
+    scenario_id = sys.argv[1] if len(sys.argv) > 1 else "RC-1"
+    scenarios = {s["id"]: s for s in json.loads(Path("eval/scenarios.json").read_text())}
+    scenario = scenarios[scenario_id]
 
-    print("\n" + "=" * 60)
-    print("ENVIRONMENTAL CLEARANCE PRE-SCREENING")
-    print("=" * 60)
+    print(f"{scenario_id}: {scenario['name']}")
+    print(f"provider={settings.llm_provider} model={settings.llm_model} prompt={settings.prompt_version}")
+    warm_up()
 
-    # --------------------------------------------------
-    # TEST CASE
-    # Industrial project near a protected area
-    # --------------------------------------------------
+    run_id = f"local_{uuid.uuid4().hex[:6]}"
+    recorder = RunRecorder(run_id, run_id)
+    request = build_request(ScreeningSubmission(**scenario["payload"]).model_dump(exclude_none=True), run_id, run_id)
+    final = run_screening(request, run_id, run_id, recorder=recorder)
 
-    request = ProjectRequest(
-        run_id="run_001",
-        correlation_id="corr_001",
+    print("\nTRACE")
+    for e in recorder.events:
+        what = e.get("tool") or e.get("step") or ""
+        extra = e.get("returned_chunk_ids") or e.get("verdict") or e.get("outcome") or ""
+        print(f"  +{e['t_offset_ms']:>8}ms {e['kind']:<14} {e.get('agent', ''):<16} {what:<28} {extra}")
 
-        description=(
-            "Industrial project located 2 km "
-            "from a national park."
-        ),
-
-        sector_hint="industrial",
-
-        capacity=Capacity(
-            value=100,
-            unit="TPD"
-        ),
-
-        area_ha=25,
-
-        location=Location(
-            state="Karnataka",
-            district="Mysuru"
-        ),
-
-        nearest_protected_area=ProtectedArea(
-            type="national_park",
-            distance_km=2
-        )
-    )
-
-    initial_state = AgentState(
-        request=request
-    )
-
-    # --------------------------------------------------
-    # RUN LANGGRAPH
-    # --------------------------------------------------
-
-    result = graph.invoke(initial_state)
-
-    # LangGraph may return a dictionary representation
-    # of our AgentState.
-    final_state = AgentState.model_validate(result)
-
-    # --------------------------------------------------
-    # DISPLAY RESULT
-    # --------------------------------------------------
-
-    print("\nFINAL STATUS")
-    print("-" * 60)
-    print(final_state.status)
-
-    print("\nEXTRACTED ENTITIES")
-    print("-" * 60)
-
-    if final_state.extracted_entities:
-        print(
-            final_state.extracted_entities.model_dump_json(
-                indent=2
-            )
-        )
-
-    print("\nDRAFT DETERMINATION")
-    print("-" * 60)
-
-    if final_state.draft_answer:
-        print(
-            final_state.draft_answer.model_dump_json(
-                indent=2
-            )
-        )
-    else:
-        print("No draft determination.")
-
-    print("\nVERIFICATION")
-    print("-" * 60)
-
-    if final_state.verification:
-        print(
-            final_state.verification.model_dump_json(
-                indent=2
-            )
-        )
-    else:
-        print("No verification result.")
-
-    print("\nRETRIEVED EVIDENCE")
-    print("-" * 60)
-
-    for chunk_id, chunk in final_state.retrieved_chunks.items():
-
-        print(f"\nChunk ID : {chunk_id}")
-        print(f"Section  : {chunk.section}")
-        print(f"Clause   : {chunk.clause}")
-        print(f"Text     : {chunk.text}")
-
-    print("\nEXECUTION COUNTERS")
-    print("-" * 60)
-
-    print("Graph steps          :", final_state.steps)
-    print("Tool calls           :", final_state.tool_calls)
-    print(
-        "Verification retries :",
-        final_state.verification_retries
-    )
-
-    if final_state.escalation:
-
-        print("\nESCALATION")
-        print("-" * 60)
-
-        print(
-            final_state.escalation.model_dump_json(
-                indent=2
-            )
-        )
-
-    print("\n" + "=" * 60)
-    print(
-        "\nOutput guardrail:",
-        final_state.metadata.get("output_guardrail")
-    )
-
-    print(
-        "DISCLAIMER: This is a screening opinion, "
-        "not an authoritative environmental clearance determination."
-    )
-
-    print("=" * 60 + "\n")
-
-
+    print(f"\nSTATUS {final.status} (mode {final.mode}) steps={final.steps} tool_calls={final.tool_calls} "
+          f"llm_calls={final.llm_calls} tokens={final.prompt_tokens}+{final.completion_tokens} cost=${final.cost_usd:.5f}")
+    if final.status == "answered":
+        d = final.draft_answer
+        print(f"{d.category} -> {d.route} (Schedule item {d.schedule_item})\n{d.basis}")
+        for c in d.citations:
+            print(f"  [{c.chunk_id}] \"{c.quote.strip()[:90]}\"")
+    if final.escalation:
+        print(f"ESCALATED {final.escalation.reason_code}: {final.escalation.detail}")
+    expected = scenario.get("expected_route") or f"escalate:{scenario.get('expected_reason')}"
+    print(f"\nexpected: {expected}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
