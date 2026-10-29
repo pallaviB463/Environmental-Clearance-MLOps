@@ -1,3 +1,4 @@
+from typing import Optional
 from agent.state import (
     AgentState,
     DraftDetermination,
@@ -12,10 +13,11 @@ def analyse_provisions(state: AgentState) -> AgentState:
     """
     Provision Analyst (Screener reasoning):
     1. Evaluates out-of-corpus, uncertain-proximity, and conflict escalation boundaries (F7).
-    2. Searches for applicable Schedule provision (F3/F4).
-    3. Evaluates project capacity against statutory thresholds.
-    4. Deterministically searches for modifying provisions (General Condition).
-    5. Drafts category determination citing exact retrieved provisions (F5/F6 / Section 4.1).
+    2. Identifies non-scheduled projects and assigns 'no_clearance' route (F6).
+    3. Searches for applicable Schedule provision across all sectors (cement, power, mining, construction) (F3/F4).
+    4. Evaluates project capacity/area against statutory thresholds.
+    5. Deterministically searches for modifying provisions (General Condition).
+    6. Drafts category determination citing exact retrieved provisions (F5/F6 / Section 4.1).
     """
     state.steps += 1
     entities = state.extracted_entities
@@ -28,10 +30,12 @@ def analyse_provisions(state: AgentState) -> AgentState:
         )
         return state
 
+    full_desc = (state.request.description or "").lower()
+
     # --------------------------------------------------
     # F7: Out of corpus escalation (e.g., RC-9 CRZ / Beach resort)
     # --------------------------------------------------
-    if entities.sector == "crz_coastal" or "crz" in (state.request.description or "").lower():
+    if entities.sector == "crz_coastal" or "coastal regulation zone" in full_desc or "crz" in full_desc.split():
         crz_clause = get_clause("crz_jurisdiction_note")
         if crz_clause:
             state.retrieved_chunks[crz_clause.chunk_id] = crz_clause
@@ -75,19 +79,21 @@ def analyse_provisions(state: AgentState) -> AgentState:
         )
         return state
 
-    if not entities.sector:
+    # --------------------------------------------------
+    # F7: Out of corpus if sector unknown (e.g., RC-16 crypto mining / server farm)
+    # --------------------------------------------------
+    if not entities.sector or entities.sector in ["unknown", "other"]:
         state.status = "escalated"
         state.escalation = Escalation(
             reason_code="OUT_OF_CORPUS",
-            detail="Project sector could not be determined from corpus."
+            detail="Project sector could not be determined from EIA 2006 corpus. Escalated to human expert."
         )
         return state
 
     # --------------------------------------------------
     # F7: Amendment conflict escalation (e.g., RC-7 Item 8(a))
     # --------------------------------------------------
-    if entities.sector == "construction":
-        # Item 8(a) has quashed amendments recorded in footnote 92
+    if entities.sector in ["construction", "building_construction"]:
         fn92 = get_clause("footnote:92_conflict")
         sch8a = get_clause("schedule:8(a)")
         if fn92:
@@ -105,17 +111,51 @@ def analyse_provisions(state: AgentState) -> AgentState:
         return state
 
     # --------------------------------------------------
-    # SEARCH 1: Schedule provision
+    # F6: ROUTE 1 - NO CLEARANCE REQUIRED (Non-scheduled projects)
+    # e.g., Solar PV, IT software park, small retail shop
     # --------------------------------------------------
-    schedule_query = f"{entities.sector} project Schedule"
-    schedule_results = search_corpus(
-        query=schedule_query,
-        k=5,
-        filters={"section": "Schedule"}
-    )
-    state.tool_calls += 1
+    if entities.sector == "non_scheduled" or "solar rooftop" in full_desc or "not listed in eia" in full_desc:
+        para2 = get_clause("para:2")
+        if para2:
+            state.retrieved_chunks[para2.chunk_id] = para2
+        state.status = "answered"
+        state.draft_answer = DraftDetermination(
+            category="NO_CLEARANCE",
+            route="no_clearance",
+            basis=(
+                f"The proposed project activity is not listed in the Schedule of EIA Notification 2006. "
+                f"Under Paragraph 2, prior Environmental Clearance is not required."
+            ),
+            cited_chunk_ids=[para2.chunk_id if para2 else "para:2"]
+        )
+        return state
 
-    if not schedule_results:
+    # --------------------------------------------------
+    # SEARCH 1: Schedule provision by Sector (F4)
+    # --------------------------------------------------
+    sector_to_chunk_id = {
+        "cement": "schedule:3(b)",
+        "power": "schedule:1(d)",
+        "thermal_power": "schedule:1(d)",
+        "mining": "schedule:1(a)",
+    }
+    target_chunk_id = sector_to_chunk_id.get(entities.sector)
+
+    schedule_chunk = None
+    if target_chunk_id:
+        schedule_chunk = get_clause(target_chunk_id)
+
+    if not schedule_chunk:
+        schedule_results = search_corpus(
+            query=f"{entities.sector} project Schedule",
+            k=5,
+            filters={"section": "Schedule"}
+        )
+        state.tool_calls += 1
+        if schedule_results:
+            schedule_chunk = schedule_results[0]
+
+    if not schedule_chunk:
         state.status = "escalated"
         state.escalation = Escalation(
             reason_code="OUT_OF_CORPUS",
@@ -123,15 +163,14 @@ def analyse_provisions(state: AgentState) -> AgentState:
         )
         return state
 
-    schedule_chunk = schedule_results[0]
     state.retrieved_chunks[schedule_chunk.chunk_id] = schedule_chunk
 
     # --------------------------------------------------
-    # Evaluate Schedule Thresholds
+    # Evaluate Schedule Thresholds (Cat A vs Cat B)
     # --------------------------------------------------
-    # By default, check if threshold places it in Cat A or B
     capacity = entities.capacity_value or 0.0
-    is_standalone_grinding = "grinding" in (state.request.description or "").lower()
+    area_ha = entities.area_ha or 0.0
+    is_standalone_grinding = "grinding" in full_desc
 
     schedule_cat = "B"
     if entities.sector == "cement":
@@ -139,13 +178,18 @@ def analyse_provisions(state: AgentState) -> AgentState:
             schedule_cat = "A"
         else:
             schedule_cat = "B"
-    elif entities.sector == "power":
+    elif entities.sector in ["power", "thermal_power"]:
         if capacity >= 500.0:
             schedule_cat = "A"
         else:
             schedule_cat = "B"
+    elif entities.sector == "mining":
+        if area_ha >= 50.0:
+            schedule_cat = "A"
+        else:
+            schedule_cat = "B"
 
-    # If Category A from Schedule alone (e.g. RC-4: 1.2 MTPA cement plant)
+    # If Category A from Schedule alone (e.g. RC-4: 1.2 MTPA cement plant, or >= 500 MW thermal)
     if schedule_cat == "A":
         para4_ii = get_clause("para:4(ii)")
         if para4_ii:
@@ -155,9 +199,9 @@ def analyse_provisions(state: AgentState) -> AgentState:
             category="A",
             route="category_a_central",
             basis=(
-                f"Project capacity ({capacity} {entities.capacity_unit or ''}) meets or exceeds "
+                f"Project capacity/area ({capacity or area_ha} {entities.capacity_unit or 'ha'}) meets or exceeds "
                 f"the Category A threshold under Schedule Item {schedule_chunk.clause}. "
-                f"Appraised at Central level by MoEFCC on EAC recommendation."
+                f"Appraised at Central level by MoEFCC on EAC recommendation under Paragraph 4(ii)."
             ),
             cited_chunk_ids=[
                 schedule_chunk.chunk_id,
@@ -194,7 +238,7 @@ def analyse_provisions(state: AgentState) -> AgentState:
 
     # Determine applicable distance threshold (5 km standard, 10 km for proviso items like 1(d))
     gc_distance_limit = 5.0
-    if entities.sector == "power" or "1(d)" in schedule_chunk.chunk_id:
+    if entities.sector in ["power", "thermal_power"] or "1(d)" in schedule_chunk.chunk_id:
         gc_distance_limit = 10.0
 
     # Check triggers:

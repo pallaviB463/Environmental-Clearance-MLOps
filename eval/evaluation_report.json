@@ -7,7 +7,7 @@
     "context_relevance": 0.9783,
     "faithfulness": 1.0,
     "hallucination_rate": 0.0,
-    "evaluation_duration_seconds": 0.595,
+    "evaluation_duration_seconds": 0.801,
     "results": [
       {
         "id": "RC-1",
@@ -261,7 +261,7 @@
     "context_relevance": 0.9783,
     "faithfulness": 1.0,
     "hallucination_rate": 0.0,
-    "evaluation_duration_seconds": 0.499,
+    "evaluation_duration_seconds": 0.685,
     "results": [
       {
         "id": "RC-1",

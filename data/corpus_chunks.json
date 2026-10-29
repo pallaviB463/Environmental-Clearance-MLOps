@@ -29,7 +29,12 @@
       "governing_amendment": "S.O. 1599(E)",
       "default_distance_km": 5.0,
       "proviso_distance_km": 10.0,
-      "proviso_items": ["1(c)", "1(d)", "7(c)", "7(d)"],
+      "proviso_items": [
+        "1(c)",
+        "1(d)",
+        "7(c)",
+        "7(d)"
+      ],
       "in_force": true,
       "page": 30
     },
@@ -136,6 +141,36 @@
     "text": "Notice: Projects located within the Coastal Regulation Zone (CRZ) such as coastal resorts, marine facilities, port expansions, and coastal aquaculture are governed by the Coastal Regulation Zone (CRZ) Notification, 2019 / 2011 under Section 3 of the Environment (Protection) Act, 1986. They are appraised by the National Coastal Zone Management Authority (NCZMA) or State Coastal Zone Management Authority (SCZMA), not through the standard EIA 2006 Schedule. These fall outside the EIA Notification 2006 corpus.",
     "metadata": {
       "out_of_corpus": true
+    },
+    "score": 0.0
+  },
+  {
+    "chunk_id": "para:2",
+    "doc": "EIA Notification 2006 (Consolidated)",
+    "doc_version": "TNPCB_March_2025",
+    "section": "Notification Paragraphs",
+    "clause": "Paragraph 2 - Requirements of prior Environmental Clearance",
+    "text": "Paragraph 2: The following projects or activities shall require prior environmental clearance from the concerned regulatory authority: All new projects or activities listed in the Schedule; expansion and modernization of existing projects or activities listed in the Schedule. Projects or activities not falling under the Schedule, or whose capacity/threshold is strictly below the minimum screening thresholds specified in the Schedule, do not require prior environmental clearance.",
+    "metadata": {
+      "provision": "Scope",
+      "no_clearance_clause": true,
+      "page": 2
+    },
+    "score": 0.0
+  },
+  {
+    "chunk_id": "schedule:1(a)",
+    "doc": "EIA Notification 2006 (Consolidated)",
+    "doc_version": "TNPCB_March_2025",
+    "section": "Schedule",
+    "clause": "Item 1(a) - Mining of minerals",
+    "text": "Item 1(a) Mining of minerals: Category A: >= 50 hectares of mining lease area in respect of non-coal mine lease, >= 150 hectares of mining lease area in respect of coal mine lease. Category B: < 50 hectares of mining lease area in respect of non-coal mine lease, < 150 hectares of mining lease area in respect of coal mine lease. Conditions: General Condition shall apply (except for minor mineral mining leases).",
+    "metadata": {
+      "item": "1(a)",
+      "sector": "mining",
+      "gc_applies": true,
+      "in_force": true,
+      "page": 12
     },
     "score": 0.0
   }

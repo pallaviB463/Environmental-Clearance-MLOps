@@ -273,6 +273,11 @@
       border-color: rgba(139, 92, 246, 0.4);
     }
 
+        .route-no-clearance {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.15));
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+
     .route-cat-b {
       background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(16, 185, 129, 0.1));
       border-color: rgba(6, 182, 212, 0.4);
@@ -389,6 +394,7 @@
       <div class="form-group">
         <label>Quick Demonstration Presets (Section 4.1 & Eval Cases)</label>
         <div class="presets-container">
+          <button type="button" class="preset-btn" style="background:rgba(16,185,129,0.2); border-color:#10b981;" onclick="loadPreset('no_clearance')">🏢 IT Park / Solar (No Clearance)</button>
           <button type="button" class="preset-btn highlight" onclick="loadPreset('sec41')">⭐ Section 4.1: Cement 2km NP (Cat A)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('catb')">Cement 7km (Cat B State)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('power10km')">Thermal Power 8km (10km Proviso)</button>

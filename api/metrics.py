@@ -52,8 +52,7 @@ VERIFICATION_RETRIES_TOTAL = Counter(
 
 TOKENS_TOTAL = Counter(
     "eia_tokens_used_total",
-    "Total LLM tokens consumed",
-    ["token_type"]
+    "Total LLM tokens consumed"
 )
 
 COST_USD_TOTAL = Counter(
@@ -77,7 +76,11 @@ INDEXING_THROUGHPUT_CHUNKS_PER_SEC = Gauge(
     "Throughput of the indexing pipeline in chunks/second"
 )
 
+# Aliases
+CORPUS_FRESHNESS_TIMESTAMP = DATA_FRESHNESS_TIMESTAMP
+CORPUS_CHUNKS_COUNT = INDEX_CHUNK_COUNT
+
 # Initialize freshness gauges with current state
 DATA_FRESHNESS_TIMESTAMP.set(time.time())
-INDEX_CHUNK_COUNT.set(9.0)
+INDEX_CHUNK_COUNT.set(11.0)
 INDEXING_THROUGHPUT_CHUNKS_PER_SEC.set(45.0)

@@ -1,8 +1,39 @@
+import os
+os.environ["LLM_PROVIDER"] = "stub"
 import time
 import httpx
 
-
 BASE_URL = "http://127.0.0.1:8000"
+
+
+import socket
+
+def is_port_open(host="127.0.0.1", port=8000) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=0.05):
+            return True
+    except Exception:
+        return False
+
+def get_http_client():
+    """
+    Connects to live FastAPI server on port 8000 if running.
+    Falls back seamlessly to in-memory FastAPI TestClient if server is offline.
+    """
+    if is_port_open("127.0.0.1", 8000):
+        try:
+            live = httpx.Client(base_url=BASE_URL, timeout=1.0)
+            r = live.get("/health")
+            if r.status_code == 200:
+                print("[INFO] Connected to live EIA service on http://127.0.0.1:8000")
+                return live
+        except Exception:
+            pass
+
+    from fastapi.testclient import TestClient
+    from api.app import app
+    print("[INFO] Live server offline; running in-memory via FastAPI TestClient.")
+    return TestClient(app)
 
 
 def print_header(title):
@@ -16,11 +47,13 @@ def run_demo():
     print("MINI PROJECT 13 — 10 DEMONSTRATION ITEMS VERIFICATION")
     print("=" * 70)
 
+    client = get_http_client()
+
     # -------------------------------------------------------------
     # ITEM 1: Clean system health
     # -------------------------------------------------------------
     print_header("1. Working System & Health Status")
-    res = httpx.get(f"{BASE_URL}/health")
+    res = client.get("/health")
     assert res.status_code == 200
     print(f"[OK] System Healthy: {res.json()}")
 
@@ -48,22 +81,31 @@ def run_demo():
         ]
     }
 
-    sub_res = httpx.post(f"{BASE_URL}/v1/screenings", json=payload_4_1)
+    sub_res = client.post("/v1/screenings", json=payload_4_1)
     run_id = sub_res.json()["run_id"]
     print(f"Submitted run ID: {run_id}. Polling...")
 
+    run_data = {}
     for _ in range(15):
-        time.sleep(0.4)
-        run_data = httpx.get(f"{BASE_URL}/v1/screenings/{run_id}").json()
-        if run_data["status"] in ["answered", "escalated"]:
+        time.sleep(0.3)
+        poll_res = client.get(f"/v1/screenings/{run_id}")
+        run_data = poll_res.json()
+        if run_data.get("status") in ["answered", "escalated"]:
             break
 
-    print(f"[RESULT] Category: {run_data['category']} | Route: {run_data['route']}")
-    print(f"[BASIS] {run_data['basis']}")
-    print(f"[CITATIONS] {run_data['cited_chunk_ids']}")
-    assert run_data["category"] == "A", "Must be Category A"
-    assert "schedule:3(b)" in run_data["cited_chunk_ids"]
-    assert "gc:s_o_1599_e_2014" in run_data["cited_chunk_ids"]
+    result_info = run_data.get("result", {})
+    category = result_info.get("category", "")
+    route = result_info.get("route", "")
+    basis = result_info.get("basis", "")
+    cited_chunks = result_info.get("cited_chunk_ids", [])
+
+    print(f"[RESULT] Category: {category} | Route: {route}")
+    print(f"[BASIS] {basis}")
+    print(f"[CITATIONS] {cited_chunks}")
+    assert category == "A", f"Must be Category A (got {category})"
+    assert route == "category_a_central", f"Must route to central (got {route})"
+    assert "schedule:3(b)" in cited_chunks
+    assert "gc:s_o_1599_e_2014" in cited_chunks
     print("[PASS] Case 4.1 passed: Schedule Cat B upgraded to Cat A Central via General Condition!")
 
     # -------------------------------------------------------------
@@ -72,11 +114,11 @@ def run_demo():
     print_header("3. Run Traced End-to-End (Steps, Latency, Tool Calls)")
     print(f"Run ID          : {run_data['run_id']}")
     print(f"Correlation ID  : {run_data['correlation_id']}")
-    print(f"Total Steps     : {run_data['steps']}")
-    print(f"Tool Calls      : {run_data['tool_calls']}")
+    print(f"Total Steps     : {run_data['metrics']['steps']}")
+    print(f"Tool Calls      : {run_data['metrics']['tool_calls']}")
+    print(f"Tokens Consumed : {run_data['metrics']['tokens']}")
+    print(f"Cost (USD)      : ${run_data['metrics']['cost_usd']}")
     print(f"Latency         : {run_data['latency_seconds']}s")
-    print(f"Prompt Version  : {run_data['prompt_version']}")
-    print(f"Verifier Status : {run_data['verification']['verdict']}")
     print("[PASS] Run is fully reconstructible from telemetry metadata.")
 
     # -------------------------------------------------------------
@@ -90,12 +132,12 @@ def run_demo():
         "capacity": {"value": -5.0, "unit": "million_tonnes_per_annum"},
         "location": {"state": "Karnataka", "district": "Bellary"}
     }
-    quar_res = httpx.post(f"{BASE_URL}/v1/screenings", json=bad_payload)
+    quar_res = client.post("/v1/screenings", json=bad_payload)
     assert quar_res.status_code == 422
     quar_data = quar_res.json()
     print(f"[OK] HTTP 422 Received. Quarantine ID: {quar_data.get('quarantine_id')}")
 
-    q_records = httpx.get(f"{BASE_URL}/v1/quarantine").json()["records"]
+    q_records = client.get("/v1/quarantine").json()["records"]
     assert len(q_records) > 0
     assert q_records[-1]["agent_started"] is False
     print("[PASS] Verified that payload was quarantined and agent execution was aborted.")
@@ -111,9 +153,9 @@ def run_demo():
         "capacity": {"value": 10.0, "unit": "hectares"},
         "location": {"state": "Goa", "district": "South Goa"}
     }
-    crz_run_id = httpx.post(f"{BASE_URL}/v1/screenings", json=crz_payload).json()["run_id"]
-    time.sleep(1)
-    crz_result = httpx.get(f"{BASE_URL}/v1/screenings/{crz_run_id}").json()
+    crz_run_id = client.post("/v1/screenings", json=crz_payload).json()["run_id"]
+    time.sleep(0.5)
+    crz_result = client.get(f"/v1/screenings/{crz_run_id}").json()
     print(f"[RESULT] Status: {crz_result['status']}")
     print(f"[ESCALATION] Code: {crz_result['escalation']['reason_code']} - {crz_result['escalation']['detail']}")
     assert crz_result["status"] == "escalated"
@@ -124,10 +166,11 @@ def run_demo():
     # ITEM 6: Self-Verification
     # -------------------------------------------------------------
     print_header("6. Self-Verification Outcome")
-    print(f"Checks Performed: {run_data['verification']['checks']}")
-    print(f"Verification Verdict: {run_data['verification']['verdict']}")
-    assert run_data["verification"]["passed"] is True
-    print("[PASS] Verifier checked citations, GC agreement, and route consistency.")
+    ver_info = result_info.get("verification", {})
+    print(f"Checks Performed: {ver_info.get('checks', [])}")
+    print(f"Verification Verdict: {ver_info.get('verdict')}")
+    assert ver_info.get("passed") is True
+    print("[PASS] Verifier checked citations, textual grounding, GC agreement, and route consistency.")
 
     # -------------------------------------------------------------
     # ITEM 7: Prompt Injection Guardrail Response
@@ -140,9 +183,9 @@ def run_demo():
         "capacity": {"value": 100.0, "unit": "TPD"},
         "location": {"state": "Delhi", "district": "New Delhi"}
     }
-    inj_run_id = httpx.post(f"{BASE_URL}/v1/screenings", json=inj_payload).json()["run_id"]
-    time.sleep(1)
-    inj_result = httpx.get(f"{BASE_URL}/v1/screenings/{inj_run_id}").json()
+    inj_run_id = client.post("/v1/screenings", json=inj_payload).json()["run_id"]
+    time.sleep(0.5)
+    inj_result = client.get(f"/v1/screenings/{inj_run_id}").json()
     print(f"[RESULT] Status: {inj_result['status']}")
     print(f"[GUARDRAIL] Reason: {inj_result['escalation']['reason_code']}")
     assert inj_result["escalation"]["reason_code"] == "PROMPT_INJECTION_DETECTED"
@@ -171,7 +214,7 @@ def run_demo():
     # ITEM 9: Declared SLO (p95 <= 60s)
     # -------------------------------------------------------------
     print_header("9. Declared SLO & Measured End-to-End Latency")
-    metrics_text = httpx.get(f"{BASE_URL}/metrics").text
+    metrics_text = client.get("/metrics").text
     print(f"Measured Run Latency: {run_data['latency_seconds']}s")
     print("Declared Target: p95 <= 60.0s at 10 concurrency with stub LLM.")
     assert run_data["latency_seconds"] < 60.0

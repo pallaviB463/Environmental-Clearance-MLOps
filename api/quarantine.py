@@ -58,6 +58,9 @@ class QuarantineStore:
     def get_all(self) -> List[Dict[str, Any]]:
         return list(self._records)
 
+    def get_records(self, limit: int = 50) -> Dict[str, Any]:
+        return {'records': list(reversed(self._records))[:limit]}
+
     def count(self) -> int:
         return len(self._records)
 

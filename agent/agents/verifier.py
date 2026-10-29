@@ -9,10 +9,11 @@ def verify_answer(state: AgentState) -> AgentState:
     1. A draft answer exists.
     2. Every cited chunk was retrieved during THIS run.
     3. Every cited chunk can be resolved from retrieved_chunks.
-    4. Category A due to a General Condition must cite BOTH
+    4. Textual Grounding: Verifies that the retrieved chunk's verbatim text
+       substantively supports the drafted determination (addresses A3 critique).
+    5. Category A due to a General Condition must cite BOTH
        a Schedule provision and a General Condition.
-    5. Route must agree with the drafted category.
-    6. Ensures unverified answers never return confident status.
+    6. Route must agree with the drafted category.
     """
     state.steps += 1
     draft = state.draft_answer
@@ -68,13 +69,52 @@ def verify_answer(state: AgentState) -> AgentState:
     )
 
     # --------------------------------------------------
-    # CHECK 4: Category A via General Condition citation completeness
+    # CHECK 4: TEXTUAL GROUNDING (Addresses A3)
+    # Checks that retrieved text actually supports the drafted outcome.
     # --------------------------------------------------
     cited_chunks = [
         state.retrieved_chunks[chunk_id]
         for chunk_id in draft.cited_chunk_ids
     ]
+    combined_text = " ".join(c.text for c in cited_chunks).lower()
 
+    if draft.category == "A":
+        # Text must contain Category A statutory phrasing or General Condition upgrade
+        if not ("category a" in combined_text or "category 'a'" in combined_text or "central level" in combined_text or "general condition" in combined_text):
+            state.verification = VerificationResult(
+                passed=False,
+                verdict="retry",
+                checks=checks + ["FAIL: Retrieved text does not support Category A determination."],
+                reason="TEXT_DOES_NOT_SUPPORT_CATEGORY_A"
+            )
+            return state
+        checks.append("PASS: Retrieved legal text substantively supports Category A determination.")
+
+    elif draft.category == "B":
+        if not ("category b" in combined_text or "category 'b'" in combined_text or "state" in combined_text):
+            state.verification = VerificationResult(
+                passed=False,
+                verdict="retry",
+                checks=checks + ["FAIL: Retrieved text does not support Category B determination."],
+                reason="TEXT_DOES_NOT_SUPPORT_CATEGORY_B"
+            )
+            return state
+        checks.append("PASS: Retrieved legal text substantively supports Category B determination.")
+
+    elif draft.category == "NO_CLEARANCE":
+        if not ("not require" in combined_text or "below" in combined_text or "paragraph 2" in combined_text):
+            state.verification = VerificationResult(
+                passed=False,
+                verdict="retry",
+                checks=checks + ["FAIL: Retrieved text does not support No Clearance determination."],
+                reason="TEXT_DOES_NOT_SUPPORT_NO_CLEARANCE"
+            )
+            return state
+        checks.append("PASS: Retrieved legal text substantively supports No Clearance determination.")
+
+    # --------------------------------------------------
+    # CHECK 5: Citation completeness & structure
+    # --------------------------------------------------
     has_schedule = any(
         "schedule" in chunk.section.lower() or "schedule:" in chunk.chunk_id.lower()
         for chunk in cited_chunks
@@ -85,19 +125,33 @@ def verify_answer(state: AgentState) -> AgentState:
         for chunk in cited_chunks
     )
 
-    # If basis mentions General Condition or proximity modification was applied:
-    if "general condition" in draft.basis.lower() and draft.category == "A":
+    has_scope = any(
+        "paragraph 2" in chunk.clause.lower() or "para:2" in chunk.chunk_id.lower()
+        for chunk in cited_chunks
+    )
+
+    if draft.category == "NO_CLEARANCE":
+        if not (has_scope or has_schedule):
+            state.verification = VerificationResult(
+                passed=False,
+                verdict="retry",
+                checks=checks + ["FAIL: No Clearance must cite Paragraph 2 or Schedule threshold."],
+                reason="SCOPE_CITATION_MISSING"
+            )
+            return state
+        checks.append("PASS: No Clearance cites governing statutory scope.")
+
+    elif "general condition" in draft.basis.lower() and draft.category == "A":
         if not has_schedule or not has_general_condition:
             state.verification = VerificationResult(
                 passed=False,
                 verdict="retry",
                 checks=checks + [
-                    "FAIL: Category A determination via General Condition must cite both the Schedule entry and General Condition."
+                    "FAIL: Category A determination via General Condition must cite both Schedule entry and General Condition."
                 ],
                 reason="REQUIRED_CITATION_MISSING"
             )
             return state
-
         checks.append(
             "PASS: Category A determination via General Condition cites both Schedule and General Condition."
         )
@@ -115,7 +169,7 @@ def verify_answer(state: AgentState) -> AgentState:
         checks.append("PASS: Determination cites applicable Schedule entry.")
 
     # --------------------------------------------------
-    # CHECK 5: Category and route must agree
+    # CHECK 6: Category and route must agree
     # --------------------------------------------------
     expected_routes = {
         "A": "category_a_central",

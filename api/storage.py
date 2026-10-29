@@ -15,6 +15,7 @@ class RunRecord(BaseModel):
     correlation_id: str
     status: str = "QUEUED"  # QUEUED, RUNNING, ANSWERED, ESCALATED, FAILED
     submitted_at: float = Field(default_factory=time.time)
+    started_at: Optional[float] = None
     completed_at: Optional[float] = None
     latency_seconds: Optional[float] = None
 
@@ -83,6 +84,12 @@ class RunStorage:
         )
         self.feedback.append(rec)
         return rec
+
+    def count_active_runs(self) -> int:
+        return sum(1 for r in self.runs.values() if r.status in ["QUEUED", "RUNNING", "running", "queued"])
+
+    def record_feedback(self, run_id: str, rating: int, comments: Optional[str] = None):
+        return self.add_feedback(run_id=run_id, satisfactory=(rating >= 3), reason=comments)
 
     def get_feedback_summary(self) -> Dict[str, Any]:
         total = len(self.feedback)

@@ -11,6 +11,7 @@ services:
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      - REDIS_ENABLED=true
       - REDIS_URL=redis://redis:6379/0
       - LLM_PROVIDER=stub
     depends_on:
@@ -28,6 +29,7 @@ services:
     restart: always
     command: ["python", "-m", "api.worker"]
     environment:
+      - REDIS_ENABLED=true
       - REDIS_URL=redis://redis:6379/0
       - LLM_PROVIDER=stub
     depends_on:

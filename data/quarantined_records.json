@@ -147,5 +147,63 @@
       }
     ],
     "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_fda35e8a",
+    "timestamp": 1793248800.3351138,
+    "client_ip": "testclient",
+    "payload": {
+      "project_name": "Invalid Capacity Plant",
+      "description": "Negative capacity test.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "body",
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
+  },
+  {
+    "quarantine_id": "quar_9678a3f9",
+    "timestamp": 1793248889.4720414,
+    "client_ip": "testclient",
+    "payload": {
+      "project_name": "Invalid Capacity Plant",
+      "description": "Negative capacity test.",
+      "sector_hint": "cement",
+      "capacity": {
+        "value": -5.0,
+        "unit": "million_tonnes_per_annum"
+      },
+      "location": {
+        "state": "Karnataka",
+        "district": "Bellary"
+      }
+    },
+    "field_errors": [
+      {
+        "loc": [
+          "body",
+          "capacity"
+        ],
+        "msg": "Value error, Capacity value must be positive (received -5.0).",
+        "type": "value_error"
+      }
+    ],
+    "agent_started": false
   }
 ]

@@ -24,8 +24,8 @@ class ProtectedArea(BaseModel):
 
 
 class ProjectRequest(BaseModel):
-    run_id: str
-    correlation_id: str
+    run_id: Optional[str] = None
+    correlation_id: Optional[str] = None
 
     description: str
     project_name: Optional[str] = None
