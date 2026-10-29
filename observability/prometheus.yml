@@ -1,0 +1,33 @@
+# Prometheus scrapes every service (D5). Worker replicas are discovered through Docker's
+# DNS: the name "agent-worker" resolves to every replica, so --scale needs no config change.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: api
+    static_configs:
+      - targets: ["api:8000"]
+
+  - job_name: agent-worker
+    dns_sd_configs:
+      - names: ["agent-worker"]
+        type: A
+        port: 9100
+        refresh_interval: 10s
+
+  - job_name: verifier-agent
+    static_configs:
+      - targets: ["verifier-agent:8002"]
+
+  - job_name: llm-stub
+    static_configs:
+      - targets: ["llm-stub:8001"]
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

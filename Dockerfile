@@ -1,22 +1,39 @@
+# One image, several roles (api, agent-worker, verifier-agent, llm-stub, indexer).
+# The role is chosen by the compose `command`. Same code everywhere, separate processes.
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/models/hf
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# CPU-only torch first, so sentence-transformers does not pull the CUDA build
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-# Copy application codebase
-COPY . .
+COPY agent ./agent
+COPY api ./api
+COPY eval ./eval
+COPY frontend ./frontend
+COPY ingest ./ingest
+COPY loadtest ./loadtest
+COPY observability ./observability
+COPY stub_llm ./stub_llm
+COPY verifier_service ./verifier_service
+COPY data ./data
+COPY .env.example ./.env.example
 
-# Expose API port
+RUN useradd --create-home --uid 1000 app \
+    && mkdir -p /app/data/index /models/hf \
+    && chown -R app:app /app/data /models
+USER app
+
 EXPOSE 8000
-
-# Default entrypoint starts the API and background worker
 CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]

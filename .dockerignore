@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+data/index
+eval/reports
+loadtest/results
+*.pptx
+docs/*.pdf
+MiniProject_13_Environmental_Clearance_Screening.pdf

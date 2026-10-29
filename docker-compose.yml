@@ -1,71 +1,173 @@
-version: "3.8"
+# docker compose up --build                       full system from a clean clone (stub LLM, no key needed)
+# docker compose up --build --scale agent-worker=3
+#
+# Deployment boundaries (D3), and why each one is its own service:
+#   api             I/O-bound HTTP; must stay responsive while agents run. Scales on request rate.
+#   agent-worker    CPU + network heavy (embedding queries, LLM turns). Scales on queue depth (A7).
+#   verifier-agent  Second agent (A2). Fails independently: an unreachable verifier escalates
+#                   the run instead of releasing an unverified answer. Released independently.
+#   llm-stub        Stand-in for the provider in load tests (D6); swapped out by config only.
+#   indexer         One-shot corpus pipeline (D2); different resource profile (batch embedding).
+#   redis           Queue, run store, caches, rate limits: the only shared state.
+#   prometheus / grafana / jaeger / cadvisor   Observability (D5), isolated from the app.
+
+x-app-env: &app-env
+  REDIS_URL: redis://redis:6379/0
+  VERIFIER_URL: http://verifier-agent:8002
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  INDEX_DIR: /app/data/index
+  # Real provider if .env sets one, otherwise the stub service
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://llm-stub:8001/v1}
+
+x-app: &app
+  build: .
+  image: eia-prescreening:latest
+  env_file:
+    - path: .env.example
+      required: true
+    - path: .env
+      required: false
+  volumes:
+    - index_data:/app/data/index
+    - hf_cache:/models/hf
+  restart: unless-stopped
 
 services:
-  # 1. API Service (FastAPI, Ingestion Boundary, Web Client UI)
-  api:
-    build: .
-    container_name: eia-api
-    restart: always
-    ports:
-      - "8000:8000"
-    environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - REDIS_ENABLED=true
-      - REDIS_URL=redis://redis:6379/0
-      - LLM_PROVIDER=stub
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
-  # 2. Agent Worker Service (Scalable multi-agent worker: --scale agent-worker=3)
-  agent-worker:
-    build: .
-    restart: always
-    command: ["python", "-m", "api.worker"]
-    environment:
-      - REDIS_ENABLED=true
-      - REDIS_URL=redis://redis:6379/0
-      - LLM_PROVIDER=stub
-    depends_on:
-      - redis
-      - api
-
-  # 3. Redis Service (Queue, Run Caching, Per-Client Rate Limiting)
   redis:
-    image: redis:7-alpine
-    container_name: eia-redis
-    restart: always
-    ports:
-      - "6379:6379"
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    volumes: [redis_data:/data]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
 
-  # 4. Prometheus Service (Metrics Collection & SLO Monitoring)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: eia-prometheus
-    restart: always
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  indexer:
+    <<: *app
+    command: ["python", "-m", "ingest", "build"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: indexer
+    restart: "no"
+
+  llm-stub:
+    <<: *app
+    command: ["uvicorn", "stub_llm.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: llm-stub
+      STUB_LLM_DELAY_SECONDS: "1.5"
+    ports: ["8001:8001"]
     depends_on:
-      - api
+      indexer: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # 5. Jaeger Service (Distributed OpenTelemetry Tracing)
+  verifier-agent:
+    <<: *app
+    command: ["uvicorn", "verifier_service.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: verifier-agent
+    ports: ["8002:8002"]
+    depends_on:
+      indexer: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      llm-stub: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  agent-worker:
+    <<: *app
+    command: ["python", "-m", "api.worker"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: agent-worker
+      WORKER_METRICS_PORT: "9100"
+    stop_grace_period: 90s
+    depends_on:
+      indexer: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      verifier-agent: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9100/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  api:
+    <<: *app
+    command: ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: api
+    ports: ["8000:8000"]
+    depends_on:
+      indexer: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [api]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/eia.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+    restart: unless-stopped
+
   jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: eia-jaeger
-    restart: always
+    image: jaegertracing/all-in-one:1.60
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
     ports:
-      - "16686:16686" # Web UI
-      - "4318:4318"   # OTLP HTTP receiver
+      - "16686:16686"  # UI
+      - "4318:4318"    # OTLP over HTTP
+    restart: unless-stopped
+
+  # Opt-in: docker compose --profile cadvisor up. Host bind mounts can be refused by Docker
+  # Desktop on macOS/Windows, so it is kept out of the default `up`. Without it, per-container
+  # CPU and memory still come from each service's own process metrics.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    profiles: ["cadvisor"]
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports: ["8080:8080"]
+    restart: unless-stopped
+
+volumes:
+  index_data:
+  hf_cache:
+  redis_data:
