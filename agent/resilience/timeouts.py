@@ -1,3 +1,4 @@
+import contextvars
 from concurrent.futures import (
     ThreadPoolExecutor,
     TimeoutError as FutureTimeoutError
@@ -21,7 +22,8 @@ def run_with_timeout(
     """
 
     executor = ThreadPoolExecutor(max_workers=1)
-    future = executor.submit(operation)
+    # Carry the caller's context (trace span, correlation id) into the worker thread
+    future = executor.submit(contextvars.copy_context().run, operation)
 
     try:
         result = future.result(timeout=timeout_seconds)
