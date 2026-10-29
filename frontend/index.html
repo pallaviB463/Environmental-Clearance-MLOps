@@ -403,6 +403,7 @@
           <button type="button" class="preset-btn" onclick="loadPreset('conflict')">⚠️ Amendment Conflict 8(a)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('crz')">🌊 CRZ Coastal (Outside Corpus)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('injection')">🛡️ Injection Attempt</button>
+          <button type="button" class="preset-btn" onclick="loadPreset('industrial_generic')">❓ "Industrial project" (PS wording, ambiguous)</button>
         </div>
       </div>
 
@@ -422,11 +423,12 @@
             <label>Sector Category</label>
             <select id="sectorHint">
               <option value="cement">Cement Plants (Item 3b)</option>
-              <option value="power">Thermal Power Plants (Item 1d)</option>
+              <option value="thermal_power">Thermal Power Plants (Item 1d)</option>
+              <option value="solar">Solar PV (not in the Schedule)</option>
               <option value="mining">Mining of Minerals (Item 1a)</option>
               <option value="construction">Building & Construction (Item 8a)</option>
               <option value="river_valley">River Valley Projects (Item 1c)</option>
-              <option value="industrial">General Industrial Project</option>
+              <option value="industrial">General Industrial Project (unspecified)</option>
               <option value="crz_coastal">Coastal / CRZ Facility</option>
             </select>
           </div>
@@ -513,6 +515,32 @@
 
   <script>
     const PRESETS = {
+      no_clearance: {
+        name: "Solar PV park - Jodhpur",
+        desc: "Ground-mounted solar photovoltaic park of 50 MW on 100 hectares.",
+        sector: "solar",
+        capVal: 100,
+        capUnit: "hectares",
+        area: 100,
+        state: "Rajasthan",
+        dist: "Jodhpur",
+        paType: "none",
+        paDist: 30.0,
+        paBasis: "surveyed"
+      },
+      industrial_generic: {
+        name: "Unspecified industrial project",
+        desc: "An industrial project located 2 km from the boundary of a national park.",
+        sector: "industrial",
+        capVal: 100,
+        capUnit: "TPD",
+        area: 20,
+        state: "Karnataka",
+        dist: "Mysuru",
+        paType: "national_park",
+        paDist: 2.0,
+        paBasis: "surveyed"
+      },
       sec41: {
         name: "Greenfield cement plant — Kodinar",
         desc: "Integrated cement plant (clinker production and grinding) located 2.0 km from the boundary of Gir National Park.",
@@ -542,7 +570,7 @@
       power10km: {
         name: "Super Thermal Power Station",
         desc: "Coal thermal power project of 300 MW located 8.0 km from Wildlife Sanctuary.",
-        sector: "power",
+        sector: "thermal_power",
         capVal: 300,
         capUnit: "MW",
         area: 120,
@@ -635,6 +663,23 @@
       document.getElementById('paBasis').value = p.paBasis;
     }
 
+    function proximityFromForm() {
+      const type = document.getElementById('paType').value;
+      if (type === 'none') return [];
+      const distance = parseFloat(document.getElementById('paDist').value);
+      const item = {
+        feature: type === 'eco_sensitive_zone' ? 'eco_sensitive_zone' : 'protected_area',
+        basis: document.getElementById('paBasis').value
+      };
+      if (type !== 'eco_sensitive_zone') item.subtype = type;
+      if (!isNaN(distance)) item.distance_km = distance;
+      return [item];
+    }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    }
+
     let activeRunId = null;
     let pollInterval = null;
 
@@ -657,15 +702,9 @@
           state: document.getElementById('stateName').value,
           district: document.getElementById('districtName').value
         },
-        proximity: [
-          {
-            feature: "protected_area",
-            subtype: document.getElementById('paType').value,
-            distance_km: parseFloat(document.getElementById('paDist').value),
-            basis: document.getElementById('paBasis').value
-          }
-        ]
+        proximity: proximityFromForm()
       };
+      if (isNaN(payload.project_area_ha)) delete payload.project_area_ha;
 
       try {
         const response = await fetch('/v1/screenings', {
@@ -699,7 +738,7 @@
         try {
           const res = await fetch(`/v1/screenings/${runId}`);
           const record = await res.json();
-          if (record.status !== "QUEUED" && record.status !== "RUNNING") {
+          if (record.status !== "queued" && record.status !== "running") {
             clearInterval(pollInterval);
             renderResult(record);
             document.getElementById('submitBtn').disabled = false;
@@ -734,9 +773,9 @@
 
       let errList = "";
       if (err.detail && Array.isArray(err.detail)) {
-        errList = err.detail.map(d => `<li><strong>${d.loc ? d.loc.join('.') : 'Field'}:</strong> ${d.msg}</li>`).join('');
+        errList = err.detail.map(d => `<li><strong>${esc(d.loc ? d.loc.join('.') : 'Field')}:</strong> ${esc(d.msg)}</li>`).join('');
       } else {
-        errList = `<li>${JSON.stringify(err.detail || err)}</li>`;
+        errList = `<li>${esc(JSON.stringify(err.detail || err))}</li>`;
       }
 
       document.getElementById('outputContent').innerHTML = `
@@ -750,7 +789,7 @@
             ${errList}
           </ul>
           <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
-            Quarantine Record ID: <code>${err.quarantine_id || 'quar_logged'}</code> · Agent Execution: <strong>Aborted</strong>
+            Quarantine Record ID: <code>${esc(err.quarantine_id || 'quar_logged')}</code> · Agent Execution: <strong>Aborted</strong>
           </div>
         </div>
       `;
@@ -759,106 +798,136 @@
     function renderResult(rec) {
       const badge = document.getElementById('statusBadge');
       badge.style.display = 'inline-flex';
+      const result = rec.result || {};
+      const esc_ = rec.escalation || null;
 
-      let cardClass = "route-cat-b";
-      let titleColor = "var(--accent-cyan)";
-      let routeTitle = rec.route || rec.status;
-
-      if (rec.status === "answered" && rec.category === "A") {
+      let cardClass = "route-escalate", titleColor = "var(--accent-rose)", routeTitle;
+      if (rec.status === "answered" && result.category === "A") {
         badge.className = 'status-badge status-answered';
-        badge.innerHTML = `<span>✓</span> Category A Central`;
-        cardClass = "route-cat-a";
-        titleColor = "var(--accent-amber)";
-        routeTitle = "Category A · Central Appraisal (MoEFCC / EAC)";
-      } else if (rec.status === "answered" && rec.category === "B") {
+        badge.innerHTML = `<span>✓</span> Category A · Central`;
+        cardClass = "route-cat-a"; titleColor = "var(--accent-amber)";
+        routeTitle = "Category A · Central appraisal (MoEFCC on EAC recommendation)";
+      } else if (rec.status === "answered" && result.category === "B") {
         badge.className = 'status-badge status-answered';
-        badge.innerHTML = `<span>✓</span> Category B State`;
-        cardClass = "route-cat-b";
-        titleColor = "var(--accent-cyan)";
-        routeTitle = "Category B · State Appraisal (SEIAA / SEAC)";
+        badge.innerHTML = `<span>✓</span> Category B · State`;
+        cardClass = "route-cat-b"; titleColor = "var(--accent-cyan)";
+        routeTitle = "Category B · State appraisal (SEIAA on SEAC recommendation)";
+      } else if (rec.status === "answered" && result.category === "NO_CLEARANCE") {
+        badge.className = 'status-badge status-answered';
+        badge.innerHTML = `<span>✓</span> No clearance required`;
+        cardClass = "route-cat-b"; titleColor = "var(--accent-emerald)";
+        routeTitle = "Not a listed activity · prior EC not required under this notification";
       } else {
         badge.className = 'status-badge status-escalated';
-        badge.innerHTML = `<span>⚠️</span> Escalated to Human`;
-        cardClass = "route-escalate";
-        titleColor = "var(--accent-rose)";
-        routeTitle = `Escalated: ${rec.escalation ? rec.escalation.reason_code : 'Manual Review Required'}`;
+        badge.innerHTML = `<span>⚠️</span> Escalated to a human`;
+        routeTitle = `Escalated: ${esc(esc_ ? esc_.reason_code : 'REVIEW_REQUIRED')}`;
+      }
+
+      let escalationHtml = "";
+      if (esc_) {
+        escalationHtml = `
+          <div style="background: rgba(244,63,94,0.08); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.85rem;">
+            <div><strong>Why:</strong> ${esc(esc_.detail)}</div>
+            <div style="margin-top: 0.3rem;"><strong>Escalation path:</strong> ${esc(esc_.assigned_to)}</div>
+            <div style="margin-top: 0.3rem;"><strong>Next step:</strong> ${esc(esc_.next_step)}</div>
+          </div>`;
+      }
+
+      let provisionalHtml = "";
+      if (rec.provisional_opinion) {
+        const po = rec.provisional_opinion;
+        provisionalHtml = `
+          <div style="border: 1px dashed var(--accent-amber); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.8rem;">
+            <div style="color: var(--accent-amber); font-weight: 600;">Provisional opinion (degraded mode, NOT a screening result)</div>
+            <div>${esc(po.category || po.escalation_reason_code)} · ${esc(po.route)}</div>
+            <div style="color: #9ca3af;">${esc(po.basis)}</div>
+            <div style="color: #9ca3af; margin-top: 0.3rem;">${esc(po.warning)}</div>
+          </div>`;
       }
 
       let citationsHtml = "";
-      if (rec.citations && rec.citations.length > 0) {
+      const citations = result.citations || [];
+      if (citations.length > 0) {
         citationsHtml = `
           <div style="margin-top: 1rem;">
-            <label style="margin-bottom: 0.5rem; display: block;">Retrieved Statutory Citations (Resolved to Text)</label>
+            <label style="margin-bottom: 0.5rem; display: block;">Cited provisions (each resolves to text retrieved in this run)</label>
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              ${rec.citations.map(c => `
+              ${citations.map(c => `
                 <div class="citation-card">
                   <div class="citation-header">
-                    <span>${c.clause} (${c.chunk_id})</span>
-                    <span>${c.doc_version || ''}</span>
+                    <span>${esc(c.clause)} (${esc(c.chunk_id)})</span>
+                    <span>${esc(c.doc_version)}</span>
                   </div>
-                  <div class="citation-text">${c.text}</div>
+                  ${c.quote ? `<div style="font-size: 0.8rem; margin: 0.3rem 0;"><mark>“${esc(c.quote)}”</mark></div>` : ''}
+                  <details><summary style="cursor: pointer; font-size: 0.75rem; color: #9ca3af;">Full passage</summary>
+                    <div class="citation-text">${esc(c.text)}</div>
+                  </details>
                 </div>
               `).join('')}
             </div>
-          </div>
-        `;
+          </div>`;
       }
 
       let verificationHtml = "";
-      if (rec.verification) {
+      if (result.verification) {
+        const v = result.verification;
         verificationHtml = `
           <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
             <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-emerald); margin-bottom: 0.3rem;">
-              ✓ Verifier Checks (${rec.verification.verdict.toUpperCase()})
+              Verifier agent: ${esc((v.verdict || '').toUpperCase())}${v.reason ? ' · ' + esc(v.reason) : ''}
             </div>
             <ul style="font-size: 0.75rem; color: #9ca3af; margin-left: 1.25rem;">
-              ${rec.verification.checks.map(c => `<li>${c}</li>`).join('')}
+              ${(v.checks || []).map(c => `<li>${esc(c)}</li>`).join('')}
             </ul>
-          </div>
-        `;
+          </div>`;
       }
 
-      const cacheBadge = rec.from_cache ? '<span style="color: var(--accent-emerald);">[Served from Cache]</span>' : '';
+      const m = rec.metrics || {};
+      const cacheBadge = rec.from_cache ? '<span style="color: var(--accent-emerald);">[served from cache]</span>' : '';
+      const basis = result.basis || (esc_ ? '' : 'Run completed.');
 
       document.getElementById('outputContent').innerHTML = `
         <div class="route-card ${cardClass}">
           <div class="route-title" style="color: ${titleColor};">
             <span>${routeTitle}</span>
-            <span style="font-size: 0.85rem; font-family: monospace;">${rec.run_id}</span>
+            <span style="font-size: 0.85rem; font-family: monospace;">${esc(rec.run_id)}</span>
           </div>
-          <p style="font-size: 0.95rem; line-height: 1.5;">${rec.basis || (rec.escalation ? rec.escalation.detail : 'Run completed.')}</p>
-          
+          ${basis ? `<p style="font-size: 0.95rem; line-height: 1.5;">${esc(basis)}</p>` : ''}
+          ${result.disclaimer ? `<p style="font-size: 0.75rem; color: #9ca3af;">${esc(result.disclaimer)}</p>` : ''}
+          ${escalationHtml}
+          ${provisionalHtml}
           ${verificationHtml}
           ${citationsHtml}
 
           <div class="stats-bar">
-            <div class="stat-item">Latency: <strong>${rec.latency_seconds || 0}s</strong> ${cacheBadge}</div>
-            <div class="stat-item">Steps: <strong>${rec.steps}</strong></div>
-            <div class="stat-item">Tool Calls: <strong>${rec.tool_calls}</strong></div>
-            <div class="stat-item">Prompt: <strong>${rec.prompt_version}</strong></div>
+            <div class="stat-item">Latency: <strong>${esc(rec.latency_seconds)}s</strong> ${cacheBadge}</div>
+            <div class="stat-item">Steps: <strong>${esc(m.steps)}</strong></div>
+            <div class="stat-item">Tool calls: <strong>${esc(m.tool_calls)}</strong></div>
+            <div class="stat-item">LLM calls: <strong>${esc(m.llm_calls)}</strong></div>
+            <div class="stat-item">Cost: <strong>$${esc(m.cost_usd)}</strong></div>
+            <div class="stat-item">Prompt: <strong>${esc(rec.prompt_version)}</strong> · mode <strong>${esc(rec.mode)}</strong></div>
+            <div class="stat-item"><a href="/v1/screenings/${esc(rec.run_id)}/trace" target="_blank" style="color: var(--accent-cyan);">Full run trace ↗</a></div>
           </div>
 
           <div class="feedback-section">
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Was this recommendation accurate?</span>
-            <button class="feedback-btn" onclick="sendFeedback('${rec.run_id}', true)">👍 Satisfactory</button>
-            <button class="feedback-btn" onclick="sendFeedback('${rec.run_id}', false)">👎 Unsatisfactory</button>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Was this result satisfactory?</span>
+            <button class="feedback-btn" onclick="sendFeedback('${esc(rec.run_id)}', true)">👍 Satisfactory</button>
+            <button class="feedback-btn" onclick="sendFeedback('${esc(rec.run_id)}', false)">👎 Not satisfactory</button>
           </div>
         </div>
       `;
     }
 
     async function sendFeedback(runId, satisfactory) {
-      const reason = prompt(satisfactory ? "Optional praise/comment:" : "Reason for unsatisfactory result:");
-      try {
-        await fetch(`/v1/screenings/${runId}/feedback`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ satisfactory, reason })
-        });
-        alert("Thank you! Feedback recorded for model evaluation monitoring.");
-      } catch (e) {
-        alert("Failed to submit feedback: " + e.message);
-      }
+      let reason = prompt(satisfactory ? "Optional comment:" : "Why was it not satisfactory? (required)");
+      if (reason === null) return;
+      if (!satisfactory && !reason.trim()) { alert("A reason is required."); return; }
+      const res = await fetch(`/v1/screenings/${runId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ satisfactory, reason: reason || null })
+      });
+      alert(res.ok ? "Feedback recorded." : "Feedback rejected: " + (await res.text()));
     }
   </script>
 </body>
