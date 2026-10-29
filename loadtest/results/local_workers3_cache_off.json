@@ -1,0 +1,36 @@
+{
+  "label": "local_workers3_cache_off",
+  "host": "http://localhost:8765",
+  "cache": "off",
+  "slo_p95_seconds": 60.0,
+  "levels": [
+    {
+      "users": 10,
+      "completed_runs": 33,
+      "failed_runs": 0,
+      "runs_per_second": 0.368,
+      "p50_s": 22.0,
+      "p95_s": 27.0,
+      "max_s": 28.3,
+      "submit_p95_ms": 15.0,
+      "slo_met": true,
+      "note": "",
+      "health_after": {
+        "status": "healthy",
+        "service": "api",
+        "index": {
+          "built_at": "2026-10-29T15:22:26.696802+00:00",
+          "chunks": 1380,
+          "embedding_model": "sentence-transformers/all-MiniLM-L6-v2"
+        },
+        "redis_connected": true,
+        "mode": "distributed",
+        "queue_depth": 6,
+        "llm_provider": "stub",
+        "prompt_version": "v1",
+        "llm_down_switch": false
+      }
+    }
+  ],
+  "first_failing_concurrency": null
+}
