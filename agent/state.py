@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------
-# INPUT MODELS (Published Data Contract D1 / F1)
+# INPUT MODELS (built from the validated contract payload)
 # ---------------------------------------------------------
 
 class Capacity(BaseModel):
@@ -79,6 +79,7 @@ class ExtractedEntities(BaseModel):
     proximity_basis: str = "surveyed"
 
     interstate_distance_km: Optional[float] = None
+    eco_sensitive_distance_km: Optional[float] = None
     in_critically_polluted_area: bool = False
     eco_sensitive_zone: Optional[str] = None
 
@@ -87,10 +88,17 @@ class ExtractedEntities(BaseModel):
 
 
 # ---------------------------------------------------------
-# ANALYST OUTPUT
+# SCREENER OUTPUT (hand-off contract to the Verifier)
 # ---------------------------------------------------------
 
+class Citation(BaseModel):
+    chunk_id: str
+    quote: str = ""
+
+
 class DraftDetermination(BaseModel):
+    decision: Literal["determination", "escalate"] = "determination"
+
     category: Optional[Literal["A", "B", "NO_CLEARANCE"]] = None
 
     route: Optional[
@@ -102,9 +110,19 @@ class DraftDetermination(BaseModel):
         ]
     ] = None
 
+    schedule_item: Optional[str] = None
     basis: str = ""
+    citations: List[Citation] = Field(default_factory=list)
+    modifiers_checked: List[str] = Field(default_factory=list)
 
-    cited_chunk_ids: List[str] = Field(default_factory=list)
+    escalation_reason_code: Optional[str] = None
+    escalation_detail: Optional[str] = None
+
+    produced_by: str = "screener_llm"  # or "rule_engine" on the degraded path
+
+    @property
+    def cited_chunk_ids(self) -> List[str]:
+        return [c.chunk_id for c in self.citations]
 
 
 # ---------------------------------------------------------
@@ -124,6 +142,9 @@ class VerificationResult(BaseModel):
 
     reason: Optional[str] = None
 
+    # What the Screener should do differently on a retry
+    feedback: Optional[str] = None
+
 
 # ---------------------------------------------------------
 # ESCALATION
@@ -140,16 +161,19 @@ class Escalation(BaseModel):
 
 class AgentState(BaseModel):
 
+    run_id: Optional[str] = None
+    correlation_id: Optional[str] = None
+
     # Original validated request
     request: ProjectRequest
 
     # Extractor output
     extracted_entities: Optional[ExtractedEntities] = None
 
-    # Chunks retrieved during run
+    # Chunks retrieved during run (citations must resolve to these)
     retrieved_chunks: Dict[str, Chunk] = Field(default_factory=dict)
 
-    # Analyst output
+    # Screener output
     draft_answer: Optional[DraftDetermination] = None
 
     # Verifier output
@@ -165,21 +189,31 @@ class AgentState(BaseModel):
 
     escalation: Optional[Escalation] = None
 
-    # Counters required for bounded agent execution
+    # "agentic" normally; "degraded" when the provider is unavailable and the
+    # rule engine produced a provisional opinion instead
+    mode: Literal["agentic", "degraded"] = "agentic"
+    llm_unavailable: bool = False
+    provisional_opinion: Optional[DraftDetermination] = None
+
+    # Counters required for bounded agent execution (A1)
     steps: int = 0
     tool_calls: int = 0
+    llm_calls: int = 0
+    screener_attempts: int = 0
     verification_retries: int = 0
 
     # Timing
     start_time: Optional[float] = None
+    deadline: Optional[float] = None
 
-    # Prompt tracking
+    # Prompt tracking (L2)
     prompt_version: str = "v1"
 
-    # LLM usage tracking
+    # LLM usage tracking, totals and per step (L5)
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cost_usd: float = 0.0
+    usage_by_step: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Additional internal information
     metadata: Dict[str, Any] = Field(default_factory=dict)
