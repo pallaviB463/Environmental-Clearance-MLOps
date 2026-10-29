@@ -6,3 +6,8 @@ __pycache__/
 .vscode/
 .idea/
 scratch/
+# Built artifacts: rebuilt by `python -m ingest build` / the indexer service
+data/index/
+data/runs_store.json
+data/feedback_store.json
+loadtest/results/*.csv
