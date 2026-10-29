@@ -4,378 +4,442 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EIA Clearance Pre-Screening Service</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* Lilac, from the Sajao project (Meridian visual system): SF Pro throughout, lilac
+       surfaces, one violet accent, borders before shadows. Green = answered, amber = needs
+       attention, rose = rejected. */
     :root {
-      --bg-primary: #0a0e17;
-      --bg-surface: #111827;
-      --bg-card: rgba(17, 24, 39, 0.75);
-      --border-color: rgba(255, 255, 255, 0.08);
-      --border-highlight: rgba(16, 185, 129, 0.3);
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --accent-emerald: #10b981;
-      --accent-cyan: #06b6d4;
-      --accent-amber: #f59e0b;
-      --accent-rose: #f43f5e;
-      --accent-purple: #8b5cf6;
-      --glow-emerald: rgba(16, 185, 129, 0.15);
-      --radius-lg: 16px;
-      --radius-md: 10px;
+      color-scheme: light;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
+      --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+      --win-bg: linear-gradient(165deg, #fcfbff 0%, #eee9fc 48%, #dcd3f3 78%, #cfc2ed 100%);
+      --toolbar-bg: linear-gradient(180deg, #f9f7fe, #f1ecfb);
+      --mer-pill-bg: linear-gradient(135deg, #332a63, #241c49);
+      --t-hair: #e4ddf7;
+      --t-accent: #7c3aed;
+      --btn-primary-bg: #7c3aed;
+      --t-title: #211d3d;
+      --t-muted: #6e6a88;
+      --t-faint: #948fb8;
+      --t-faint-2: #aca6ce;
+      --t-panel: #faf8ff;
+      --t-ctrl: #ffffff;
+      --t-ctrl-border: #e4def6;
+      --t-wrap: #efeafb;
+      --t-row-hover: #f1ecfe;
+      --t-card: #ffffff;
+      --t-card-border: #e9e3f8;
+      --t-key-bg: #eee9fb;
+      --t-key-text: #3d3860;
+      --t-box: #f4f0fd;
+      --t-input: #fdfcff;
+      --t-input-border: #e1d7fa;
+
+      --approved: #10b981;
+      --approved-fg: #0f9d6e;
+      --approved-bg: #e9f9f1;
+      --pending: #f59e0b;
+      --pending-fg: #b4690e;
+      --pending-bg: #fef5e7;
+      --proposal: #8b5cf6;
+      --proposal-fg: #7c3aed;
+      --proposal-bg: #f4ecfe;
+      --reject-fg: #d6486a;
+      --reject-bg: #fef3f5;
+      --reject-border: #f3d4d9;
+
+      --accent-soft: color-mix(in srgb, var(--t-accent) 12%, transparent);
+      --accent-ring: color-mix(in srgb, var(--t-accent) 28%, transparent);
+      --card-shadow: 0 1px 2px rgba(40, 30, 90, 0.05), 0 8px 20px -12px rgba(40, 30, 90, 0.22);
+
+      /* Names the page script uses for its inline colours, mapped onto Lilac */
+      --accent-emerald: var(--approved-fg);
+      --accent-cyan: var(--t-accent);
+      --accent-amber: var(--pending-fg);
+      --accent-rose: var(--reject-fg);
+      --accent-purple: var(--proposal);
+      --text-muted: var(--t-muted);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      background: var(--bg-primary);
-      color: var(--text-main);
-      font-family: 'Outfit', sans-serif;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--t-title);
+      background: var(--win-bg);
+      background-attachment: fixed;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background-image: 
-        radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 85% 75%, rgba(6, 182, 212, 0.05) 0%, transparent 45%);
+      -webkit-font-smoothing: antialiased;
     }
 
+    ::selection { background: var(--accent-soft); }
+    :focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+    code { font-family: var(--font-mono); font-size: 0.94em; }
+
+    /* ---------- toolbar ---------- */
     header {
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      backdrop-filter: blur(12px);
-      background: rgba(10, 14, 23, 0.8);
       position: sticky;
       top: 0;
-      z-index: 100;
-    }
-
-    .brand {
+      z-index: 10;
+      height: 60px;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 24px;
+      background: var(--toolbar-bg);
+      border-bottom: 1px solid var(--t-hair);
     }
-
-    .brand-icon {
-      width: 40px;
-      height: 40px;
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    /* The one flourish: the dark violet lockup behind the wordmark */
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 30px;
+      padding: 0 13px 0 9px;
       border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
+      background: var(--mer-pill-bg);
+      color: #f4f1fc;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
     }
-
-    .brand-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .brand-icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #a78bfa, #f0abfc);
     }
-
     .brand-sub {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--t-faint);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-
     .system-status {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      color: var(--accent-emerald);
-      background: var(--glow-emerald);
-      padding: 0.4rem 0.9rem;
+      gap: 7px;
+      height: 26px;
+      padding: 0 11px;
       border-radius: 999px;
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      background: var(--approved-bg);
+      color: var(--approved-fg);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
     }
-
     .pulse {
       width: 8px;
       height: 8px;
+      flex: none;
       border-radius: 50%;
-      background: var(--accent-emerald);
-      box-shadow: 0 0 8px var(--accent-emerald);
-      animation: pulseAnimation 2s infinite;
+      background: var(--approved);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+      70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .empty-state .pulse { background: var(--proposal); animation-name: pulse-violet; }
+    @keyframes pulse-violet {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.45); }
+      70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
     }
 
-    @keyframes pulseAnimation {
-      0% { transform: scale(0.95); opacity: 0.7; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.7; }
-    }
-
+    /* ---------- layout ---------- */
     main {
-      flex: 1;
-      max-width: 1300px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 2rem;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
     }
-
     @media (max-width: 1024px) {
-      main { grid-template-columns: 1fr; }
+      main { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+      header { padding: 0 16px; }
+      .brand-sub { display: none; }
     }
 
     .panel {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 1.75rem;
-      backdrop-filter: blur(16px);
+      background: var(--t-card);
+      border: 1px solid var(--t-card-border);
+      border-radius: 16px;
+      box-shadow: var(--card-shadow);
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      gap: 14px;
+      min-width: 0;
     }
-
     .panel-title {
-      font-size: 1.15rem;
-      font-weight: 600;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--t-hair);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--t-title);
     }
 
-    /* Preset Buttons */
+    /* ---------- presets (segmented-style chips) ---------- */
     .presets-container {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 12px;
+      background: var(--t-wrap);
     }
-
     .preset-btn {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.45rem 0.8rem;
-      border-radius: var(--radius-md);
-      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 11px;
+      border: 1px solid var(--t-ctrl-border);
+      border-radius: 9px;
+      background: var(--t-ctrl);
+      color: var(--t-muted);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
       cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s ease;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-
-    .preset-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
+    .preset-btn:hover { background: var(--t-row-hover); color: var(--t-title); }
     .preset-btn.highlight {
-      border-color: var(--accent-emerald);
-      color: var(--accent-emerald);
-      background: var(--glow-emerald);
+      background: var(--accent-soft);
+      border-color: var(--accent-ring);
+      color: var(--t-accent);
+      font-weight: 700;
+    }
+    .preset-btn.approved {
+      background: var(--approved-bg);
+      border-color: color-mix(in srgb, var(--approved) 30%, transparent);
+      color: var(--approved-fg);
     }
 
-    /* Form controls */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
+    /* ---------- form ---------- */
+    #screeningForm { display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     label {
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      color: var(--t-faint);
     }
-
     input, select, textarea {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.75rem 1rem;
-      border-radius: var(--radius-md);
-      font-family: inherit;
-      font-size: 0.95rem;
-      transition: all 0.2s;
+      width: 100%;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 9px;
+      border: 1px solid var(--t-input-border);
+      background: var(--t-input);
+      color: var(--t-title);
+      font: inherit;
+      font-size: 13px;
+      outline: 0;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-
+    textarea { resize: vertical; line-height: 1.5; }
     input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent-cyan);
-      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+      border-color: var(--t-accent);
+      box-shadow: 0 0 0 3px var(--accent-ring);
     }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 1rem;
-    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 560px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
 
     .submit-btn {
-      background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
-      border: none;
-      color: #000;
-      font-weight: 700;
-      font-size: 1rem;
-      padding: 0.9rem;
-      border-radius: var(--radius-md);
-      cursor: pointer;
-      transition: all 0.25s;
-      margin-top: 0.5rem;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 8px;
+      width: 100%;
+      height: 40px;
+      margin-top: 4px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--btn-primary-bg);
+      color: #fff;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.15s, opacity 0.15s;
     }
+    .submit-btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .submit-btn:active:not(:disabled) { transform: translateY(0.5px); }
+    .submit-btn:disabled { opacity: 0.55; cursor: default; }
 
-    .submit-btn:hover {
-      filter: brightness(1.15);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
-    }
-
-    /* Output Panel */
+    /* ---------- status pill ---------- */
     .status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.35rem 0.85rem;
+      gap: 5px;
+      height: 22px;
+      padding: 0 10px;
       border-radius: 999px;
-      font-size: 0.78rem;
-      font-weight: 600;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      white-space: nowrap;
     }
+    .status-answered { background: var(--approved-bg); color: var(--approved-fg); }
+    .status-escalated { background: var(--pending-bg); color: var(--pending-fg); }
+    .status-quarantined { background: var(--reject-bg); color: var(--reject-fg); }
+    .status-running { background: var(--proposal-bg); color: var(--proposal-fg); }
 
-    .status-answered { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid var(--accent-emerald); }
-    .status-escalated { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid var(--accent-amber); }
-    .status-quarantined { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); border: 1px solid var(--accent-rose); }
-    .status-running { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
-
+    /* ---------- result card ---------- */
     .route-card {
-      padding: 1.5rem;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--t-card-border);
+      border-left-width: 4px;
+      background: var(--t-panel);
     }
-
-    .route-cat-a {
-      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(245, 158, 11, 0.1));
-      border-color: rgba(139, 92, 246, 0.4);
-    }
-
-        .route-no-clearance {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.15));
-      border-color: rgba(16, 185, 129, 0.5);
-    }
-
-    .route-cat-b {
-      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(16, 185, 129, 0.1));
-      border-color: rgba(6, 182, 212, 0.4);
-    }
-
-    .route-escalate {
-      background: linear-gradient(135deg, rgba(244, 63, 94, 0.15), rgba(245, 158, 11, 0.1));
-      border-color: rgba(244, 63, 94, 0.4);
-    }
-
+    .route-cat-a { border-left-color: var(--pending); }
+    .route-cat-b { border-left-color: var(--t-accent); }
+    .route-no-clearance { border-left-color: var(--approved); }
+    .route-escalate { border-left-color: var(--reject-fg); background: #fffafb; }
     .route-title {
-      font-size: 1.3rem;
-      font-weight: 700;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
     }
+    .route-title span:last-child {
+      flex: none;
+      padding: 2px 8px;
+      border-radius: 7px;
+      background: var(--t-key-bg);
+      color: var(--t-key-text);
+      font-family: var(--font-mono);
+      font-size: 11.5px !important;
+      font-weight: 600;
+    }
+    mark {
+      background: var(--accent-soft);
+      color: var(--t-title);
+      padding: 0 3px;
+      border-radius: 4px;
+    }
+    details summary { color: var(--t-faint) !important; font-weight: 600; }
+    details summary:hover { color: var(--t-accent) !important; }
 
     .citation-card {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--border-color);
-      border-left: 3px solid var(--accent-cyan);
-      border-radius: 8px;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--t-card-border);
+      background: var(--t-card);
     }
-
     .citation-header {
-      font-size: 0.8rem;
-      color: var(--accent-cyan);
-      font-weight: 600;
       display: flex;
       justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--t-accent);
     }
-
+    .citation-header span:last-child { color: var(--t-faint); font-weight: 600; text-align: right; }
     .citation-text {
-      font-size: 0.85rem;
-      color: #d1d5db;
-      line-height: 1.45;
-      font-family: 'JetBrains Mono', monospace;
+      margin-top: 6px;
+      max-height: 220px;
+      overflow: auto;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--t-box);
+      color: var(--t-key-text);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.55;
       white-space: pre-wrap;
     }
 
     .stats-bar {
       display: flex;
-      gap: 1.5rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border-color);
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      padding-top: 12px;
+      border-top: 1px solid var(--t-hair);
     }
-
-    .stat-item strong {
-      color: var(--text-main);
-    }
+    .stat-item { font-size: 12px; color: var(--t-muted); }
+    .stat-item strong { color: var(--t-title); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-item a { color: var(--t-accent) !important; font-weight: 700; text-decoration: none; }
+    .stat-item a:hover { text-decoration: underline; }
 
     .feedback-section {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 0.75rem;
-      padding-top: 0.5rem;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--t-hair);
     }
-
     .feedback-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 0.35rem 0.75rem;
-      border-radius: 6px;
-      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 28px;
+      padding: 0 11px;
+      border: 1px solid var(--t-ctrl-border);
+      border-radius: 9px;
+      background: var(--t-ctrl);
+      color: var(--t-title);
+      font: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
       cursor: pointer;
     }
-
-    .feedback-btn:hover { background: rgba(255, 255, 255, 0.15); }
+    .feedback-btn:hover { background: var(--t-row-hover); }
 
     .empty-state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 10px;
+      min-height: 320px;
+      padding: 24px;
       text-align: center;
-      color: var(--text-muted);
-      gap: 0.75rem;
-      min-height: 300px;
+      color: var(--t-muted);
     }
+    .empty-state h3 { color: var(--t-title); font-size: 15px; font-weight: 700; }
   </style>
 </head>
 <body>
 
   <header>
     <div class="brand">
-      <div class="brand-icon">🌿</div>
-      <div>
-        <div class="brand-title">EIA Clearance Pre-Screening</div>
-        <div class="brand-sub">Multi-Agent Legal Routing Service · Jackfruit Level 3</div>
-      </div>
+      <div class="brand-pill"><div class="brand-icon"></div><span class="brand-title">EIA Clearance Pre-Screening</span></div>
+      <div class="brand-sub">Multi-Agent Legal Routing Service · Jackfruit Level 3</div>
     </div>
     <div class="system-status">
       <div class="pulse"></div>
@@ -394,7 +458,7 @@
       <div class="form-group">
         <label>Quick Demonstration Presets (Section 4.1 & Eval Cases)</label>
         <div class="presets-container">
-          <button type="button" class="preset-btn" style="background:rgba(16,185,129,0.2); border-color:#10b981;" onclick="loadPreset('no_clearance')">🏢 IT Park / Solar (No Clearance)</button>
+          <button type="button" class="preset-btn approved" onclick="loadPreset('no_clearance')">🏢 IT Park / Solar (No Clearance)</button>
           <button type="button" class="preset-btn highlight" onclick="loadPreset('sec41')">⭐ Section 4.1: Cement 2km NP (Cat A)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('catb')">Cement 7km (Cat B State)</button>
           <button type="button" class="preset-btn" onclick="loadPreset('power10km')">Thermal Power 8km (10km Proviso)</button>
@@ -785,7 +849,7 @@
             <span style="font-size: 0.85rem;">HTTP 422</span>
           </div>
           <p style="font-size: 0.9rem;">The submission violated statutory data contract rules and was quarantined before launching any agent worker.</p>
-          <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: #fca5a5;">
+          <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: var(--reject-fg);">
             ${errList}
           </ul>
           <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
@@ -826,7 +890,7 @@
       let escalationHtml = "";
       if (esc_) {
         escalationHtml = `
-          <div style="background: rgba(244,63,94,0.08); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.85rem;">
+          <div style="background: var(--reject-bg); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.85rem;">
             <div><strong>Why:</strong> ${esc(esc_.detail)}</div>
             <div style="margin-top: 0.3rem;"><strong>Escalation path:</strong> ${esc(esc_.assigned_to)}</div>
             <div style="margin-top: 0.3rem;"><strong>Next step:</strong> ${esc(esc_.next_step)}</div>
@@ -840,8 +904,8 @@
           <div style="border: 1px dashed var(--accent-amber); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem; font-size: 0.8rem;">
             <div style="color: var(--accent-amber); font-weight: 600;">Provisional opinion (degraded mode, NOT a screening result)</div>
             <div>${esc(po.category || po.escalation_reason_code)} · ${esc(po.route)}</div>
-            <div style="color: #9ca3af;">${esc(po.basis)}</div>
-            <div style="color: #9ca3af; margin-top: 0.3rem;">${esc(po.warning)}</div>
+            <div style="color: var(--t-muted);">${esc(po.basis)}</div>
+            <div style="color: var(--t-muted); margin-top: 0.3rem;">${esc(po.warning)}</div>
           </div>`;
       }
 
@@ -859,7 +923,7 @@
                     <span>${esc(c.doc_version)}</span>
                   </div>
                   ${c.quote ? `<div style="font-size: 0.8rem; margin: 0.3rem 0;"><mark>“${esc(c.quote)}”</mark></div>` : ''}
-                  <details><summary style="cursor: pointer; font-size: 0.75rem; color: #9ca3af;">Full passage</summary>
+                  <details><summary style="cursor: pointer; font-size: 0.75rem; color: var(--t-muted);">Full passage</summary>
                     <div class="citation-text">${esc(c.text)}</div>
                   </details>
                 </div>
@@ -872,11 +936,11 @@
       if (result.verification) {
         const v = result.verification;
         verificationHtml = `
-          <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
+          <div style="background: var(--t-box); border-radius: 8px; padding: 0.75rem; margin-top: 0.5rem;">
             <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-emerald); margin-bottom: 0.3rem;">
               Verifier agent: ${esc((v.verdict || '').toUpperCase())}${v.reason ? ' · ' + esc(v.reason) : ''}
             </div>
-            <ul style="font-size: 0.75rem; color: #9ca3af; margin-left: 1.25rem;">
+            <ul style="font-size: 0.75rem; color: var(--t-muted); margin-left: 1.25rem;">
               ${(v.checks || []).map(c => `<li>${esc(c)}</li>`).join('')}
             </ul>
           </div>`;
@@ -893,7 +957,7 @@
             <span style="font-size: 0.85rem; font-family: monospace;">${esc(rec.run_id)}</span>
           </div>
           ${basis ? `<p style="font-size: 0.95rem; line-height: 1.5;">${esc(basis)}</p>` : ''}
-          ${result.disclaimer ? `<p style="font-size: 0.75rem; color: #9ca3af;">${esc(result.disclaimer)}</p>` : ''}
+          ${result.disclaimer ? `<p style="font-size: 0.75rem; color: var(--t-muted);">${esc(result.disclaimer)}</p>` : ''}
           ${escalationHtml}
           ${provisionalHtml}
           ${verificationHtml}
