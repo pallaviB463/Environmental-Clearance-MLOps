@@ -1,115 +1,60 @@
-# Verified Schedule Thresholds and Conditions under EIA Notification 2006
-# Sourced from Consolidated Notification (TNPCB/MoEFCC) amended up to 2024/2025
+# Schedule thresholds used ONLY by the rule engine: the degraded fallback path
+# when the LLM provider is unavailable, and the stub LLM used for load testing.
+# The agentic path reads thresholds from the retrieved Schedule text instead.
+#
+# Every value below is transcribed from the consolidated EIA Notification 2006
+# (MoEFCC text amended up to March 2025). `item` is the Schedule row the value
+# comes from; it resolves to chunk `schedule:<item>` so rule-engine answers cite real text.
+# Whether the General Condition applies, and whether the 10 km proviso applies,
+# is NOT stored here: it is read from the indexed text at run time.
 
-items:
-  "3(b)":
-    item_id: "3(b)"
-    sector: "cement_plants"
-    sector_name: "Cement Plants"
-    description: "Cement plants and standalone grinding units"
-    threshold_unit: "million_tonnes_per_annum"
-    cat_a_threshold: 1.0  # >= 1.0 MTPA is Category A
-    cat_b_threshold: 1.0  # < 1.0 MTPA is Category B
-    standalone_grinding_unit_cat: "B"
-    gc_applies: true
-    gc_distance_km: 5.0
-    gazette_ref: "S.O. 3518(E) dated 23.11.2016"
-    consolidated_page: 22
+sectors:
+  cement:
+    item: "3(b)"
+    units: [million_tonnes_per_annum, mtpa]
+    category_a: {op: ">=", value: 1.0}
+    category_b: {op: ">", value: 0.0}
+    always_category_b_if: ["standalone grinding", "grinding unit"]
 
-  "1(d)":
-    item_id: "1(d)"
-    sector: "thermal_power"
-    sector_name: "Thermal Power Plants"
-    description: "Coal/lignite/gas/biomass based thermal power plants"
-    threshold_unit: "MW"
-    cat_a_threshold: 500.0  # >= 500 MW coal is Cat A
-    cat_b_threshold: 500.0  # < 500 MW is Cat B
-    gc_applies: true
-    gc_distance_km: 10.0  # Specific proviso inside General Condition sets 10 km for 1(d)
-    gazette_ref: "S.O. 1599(E) dated 25.06.2014 / S.O. 3067(E)"
-    consolidated_page: 18
+  thermal_power:
+    item: "1(d)"
+    units: [mw]
+    category_a: {op: ">=", value: 500.0}   # coal / lignite / naphtha / gas based
+    category_b: {op: ">", value: 5.0}
 
-  "1(a)":
-    item_id: "1(a)"
-    sector: "mining"
-    sector_name: "Mining of Minerals"
-    description: "Mining lease area"
-    threshold_unit: "hectares"
-    cat_a_threshold: 100.0  # >= 100 ha is Cat A for non-coal
-    cat_b_threshold: 100.0  # < 100 ha is Cat B
-    gc_applies: true
-    gc_distance_km: 5.0
-    gazette_ref: "S.O. 141(E) dated 15.01.2016"
-    consolidated_page: 15
+  mining:
+    item: "1(a)"
+    units: [hectares, ha]
+    category_a: {op: ">", value: 250.0}    # major mineral other than coal
+    category_b: {op: ">", value: 0.0}
+    coal:
+      category_a: {op: ">", value: 500.0}
 
-  "1(c)":
-    item_id: "1(c)"
-    sector: "river_valley"
-    sector_name: "River Valley Projects"
-    description: "Hydroelectric and irrigation projects"
-    threshold_unit: "MW"
-    cat_a_threshold: 50.0  # >= 50 MW is Cat A
-    cat_b_threshold: 50.0  # < 50 MW is Cat B
-    gc_applies: true
-    gc_distance_km: 10.0  # Proviso inside General Condition: 10 km
-    gazette_ref: "S.O. 1599(E) dated 25.06.2014"
-    consolidated_page: 17
+  river_valley:
+    item: "1(c)"
+    units: [mw]
+    category_a: {op: ">=", value: 100.0}   # hydroelectric power generation
+    category_b: {op: ">=", value: 25.0}
 
-  "7(c)":
-    item_id: "7(c)"
-    sector: "industrial_estates"
-    sector_name: "Industrial Estates / Parks / Complexes"
-    description: "Industrial estates/parks/complexes/areas, EPZs, SEZs, biotech parks"
-    threshold_unit: "hectares"
-    cat_a_threshold: 500.0
-    cat_b_threshold: 500.0
-    gc_applies: true
-    gc_distance_km: 10.0  # Proviso inside General Condition: 10 km
-    gazette_ref: "S.O. 1599(E) dated 25.06.2014"
-    consolidated_page: 27
+  construction:
+    item: "8(a)"
+    units: [sq_metres, sqm]
+    category_a: null                       # 8(a) has no Category A column
+    category_b: {op: ">=", value: 20000.0}
 
-  "7(d)":
-    item_id: "7(d)"
-    sector: "tsdf"
-    sector_name: "Hazardous Waste Treatment (TSDF)"
-    description: "Common hazardous waste treatment, storage and disposal facilities"
-    threshold_unit: "any"
-    cat_a_threshold: 0.0  # All integrated TSDF are Cat A
-    cat_b_threshold: 0.0
-    gc_applies: true
-    gc_distance_km: 10.0
-    gazette_ref: "S.O. 1599(E) dated 25.06.2014"
-    consolidated_page: 28
+sector_aliases:
+  power: thermal_power
+  thermal: thermal_power
+  building_construction: construction
+  hydroelectric: river_valley
 
-  "8(a)":
-    item_id: "8(a)"
-    sector: "building_construction"
-    sector_name: "Building and Construction Projects"
-    description: "Building projects with built-up area >= 20,000 sq.m and < 150,000 sq.m"
-    threshold_unit: "sq_metres"
-    cat_a_threshold: 150000.0  # >= 150,000 sq.m or >= 50 ha townships is 8(b)
-    cat_b_threshold: 20000.0
-    gc_applies: false  # General Condition shall NOT apply
-    gc_distance_km: null
-    gazette_ref: "S.O. 3999(E) 2016 (quashed - footnote 92), S.O. 5733(E) (not in force)"
-    consolidated_page: 29
-    amendment_conflict_flag: true  # Has quashed amendments in corpus
+# Sectors the Schedule does not list (prior EC not required under this notification)
+non_scheduled: [non_scheduled, it_software, solar]
 
+# Sectors governed by a different notification that is outside this corpus
+out_of_corpus: [crz_coastal]
+
+# General Condition distances (GC text, footnote 93: S.O. 1599(E) dated 25.06.2014)
 general_condition:
-  statutory_clause: "General Condition (GC)"
-  governing_notification: "S.O. 1599(E) dated 25.06.2014"
   default_distance_km: 5.0
-  proviso_10km_items: ["1(c)", "1(d)", "7(c)", "7(d)"]
-  triggers:
-    - code: "gc_trigger_protected_area"
-      description: "Protected Areas notified under the Wild Life (Protection) Act, 1972 (National Parks, Wildlife Sanctuaries)"
-      threshold_km: 5.0
-    - code: "gc_trigger_cpcb_polluted"
-      description: "Critically Polluted areas as identified by Central Pollution Control Board from time to time"
-      threshold_km: 5.0
-    - code: "gc_trigger_eco_sensitive"
-      description: "Eco-sensitive areas notified under section 3(2) of Environment (Protection) Act, 1986"
-      threshold_km: 5.0
-    - code: "gc_trigger_interstate_boundary"
-      description: "Inter-State boundaries and international boundaries"
-      threshold_km: 5.0
+  proviso_distance_km: 10.0

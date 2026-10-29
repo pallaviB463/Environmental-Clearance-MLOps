@@ -11,6 +11,20 @@ INJECTION_PATTERNS: List[str] = [
     r"reveal\s+(the\s+)?system\s+prompt",
     r"show\s+(me\s+)?your\s+system\s+prompt",
     r"act\s+as\s+if\s+you\s+have\s+no\s+restrictions",
+    # Role / instruction hijacking
+    r"\byou\s+are\s+now\b",
+    r"\bnew\s+instructions?\b",
+    r"(?m)^\s*(system|assistant|developer)\s*:",
+    r"\b(system|developer)\s+(prompt|message)\b",
+    r"ignore\s+(the\s+)?(rules|schedule|general\s+condition|above|everything)",
+    r"disregard\s+(the\s+)?(rules|schedule|general\s+condition|above)",
+    # Attempts to dictate the outcome to the model
+    r"\b(classify|categori[sz]e|mark|route|treat)\s+(this(\s+project)?|it|the\s+project)\s+as\s+(category\s+[ab]|no[\s_-]clearance|exempt)",
+    r"\b(grant|approve)\s+(the\s+)?clearance\b",
+    r"\b(do\s+not|don't|never)\s+(escalate|cite|check|verify)",
+    # Breaking out of the data delimiters used in the prompt
+    r"</?\s*(project_data|extracted_entities|system|instructions?)\s*>",
+    r"\bcall\s+(the\s+)?(tool|function)\b",
 ]
 
 
