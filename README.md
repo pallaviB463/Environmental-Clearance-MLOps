@@ -189,3 +189,34 @@ identifiers live in the code.
 | GET | `/v1/contract`, `/v1/quarantine` | Published data contract; quarantined submissions |
 | GET | `/health`, `/metrics` | Health; Prometheus metrics |
 | POST/GET | `/admin/chaos`, `/admin/breakers` | Simulate a provider outage; circuit breaker states (demo item 8) |
+
+## 6. Repository layout
+
+| Folder | What is in it |
+|---|---|
+| `api/` | FastAPI app, request contract, quarantine, rate limit |
+| `agent/` | LangGraph graph, Extractor/Screener/Verifier agents, tools, prompts, guardrails, LLM gateway |
+| `verifier_service/` | The Verifier agent served as its own container |
+| `stub_llm/` | Rule-based stand-in for the LLM, used when no API key is set |
+| `ingest/` | PDF parsing, chunking, embeddings and the FAISS index build |
+| `data/` | Corpus manifest, raw PDFs, schedule thresholds |
+| `eval/` | Evaluation harness, metrics and reports |
+| `loadtest/` | Locust file and the SLO sweep script |
+| `observability/` | Prometheus config, Grafana dashboard, logging and tracing setup |
+| `frontend/` | The web client served at `/` |
+| `tests/` | Unit and integration tests (`pytest -q`) |
+| `docs/` | SLO, runbook, project report, slides |
+
+## 7. Troubleshooting
+
+**A port is already in use.** The stack publishes 8000 (api), 8001 (llm-stub), 8002 (verifier-agent),
+3000 (Grafana), 9090 (Prometheus), 16686 (Jaeger) and 6379 (Redis). If another program holds one of
+them, `docker compose up` stops with "port is already allocated". Change only the host side of that
+mapping in `docker-compose.yml`, for example `ports: ["8010:8000"]` for the api, and use the new port
+in the URLs and `curl` commands above. The containers still talk to each other on the original ports.
+
+**`api` never turns healthy.** It waits for the `indexer` job. Check `docker compose logs indexer`;
+on the first run it has to parse the PDFs and download the embedding model, which needs internet.
+
+**Answers look rule-based.** That is the stub LLM. Set the NVIDIA NIM values in `.env` (section 1)
+and run `docker compose up -d --build` again.
