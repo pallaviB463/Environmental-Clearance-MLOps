@@ -1,0 +1,25 @@
+[
+ {
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "app",
+  "shape": "app screen",
+  "theme": "brand (Sajao Lilac)",
+  "axes": "lilac/system-sans/violet",
+  "hero": "none (app)",
+  "nav": "top bar with tool marks",
+  "footer": "one-line colophon",
+  "imagery": "none",
+  "photos": [],
+  "signature": "the determination sheet: ruling, verifier checks, cited provisions",
+  "sections": [
+   "intake",
+   "scenario presets",
+   "form",
+   "determination sheet"
+  ],
+  "waived": [],
+  "prompt": "legal screening tool for environmental clearance",
+  "date": "2026-10-31"
+ }
+]
